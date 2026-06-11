@@ -91,7 +91,7 @@ fun BookmarkSheet(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistorySheet(
-    items: List<AiHistoryItem>,
+    historyItems: List<AiHistoryItem>,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -101,7 +101,7 @@ fun HistorySheet(
                 .padding(horizontal = 16.dp)
         ) {
             Text("AI 전송 히스토리", style = MaterialTheme.typography.titleLarge)
-            if (items.isEmpty()) {
+            if (historyItems.isEmpty()) {
                 Text(
                     "아직 AI로 보낸 텍스트가 없습니다",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -109,7 +109,7 @@ fun HistorySheet(
                 )
             }
             LazyColumn(Modifier.heightIn(max = 420.dp)) {
-                items(items.reversed()) { item ->
+                items(historyItems.reversed()) { item ->
                     ListItem(
                         headlineContent = {
                             Text(item.text, maxLines = 2, overflow = TextOverflow.Ellipsis)

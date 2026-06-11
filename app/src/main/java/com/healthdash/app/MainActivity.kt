@@ -278,7 +278,7 @@ class MainActivity : ComponentActivity() {
         }
 
         if (showHistory) {
-            HistorySheet(items = aiHistory, onDismiss = { vm.setShowHistory(false) })
+            HistorySheet(historyItems = aiHistory, onDismiss = { vm.setShowHistory(false) })
         }
     }
 
