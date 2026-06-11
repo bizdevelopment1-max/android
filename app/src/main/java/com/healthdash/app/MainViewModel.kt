@@ -28,9 +28,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _textZoom = MutableStateFlow(settings.textZoom)
     val textZoom: StateFlow<Int> = _textZoom.asStateFlow()
 
-    private val _isLandscape = MutableStateFlow(false)
-    val isLandscape: StateFlow<Boolean> = _isLandscape.asStateFlow()
-
     private val _activeSection = MutableStateFlow("overview")
     val activeSection: StateFlow<String> = _activeSection.asStateFlow()
 
@@ -77,11 +74,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val v = value.coerceIn(SettingsManager.MIN_ZOOM, SettingsManager.MAX_ZOOM)
         _textZoom.value = v
         settings.textZoom = v
-    }
-
-    fun toggleLandscape(): Boolean {
-        _isLandscape.value = !_isLandscape.value
-        return _isLandscape.value
     }
 
     fun setActiveSection(id: String) {

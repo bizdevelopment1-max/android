@@ -2,7 +2,6 @@ package com.healthdash.app
 
 import android.content.ContentValues
 import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -119,8 +118,7 @@ class MainActivity : ComponentActivity() {
                             val id = vm.moveSection(delta)
                             dashWebView?.let { WebViewManager.navigateToSection(it, id) }
                         },
-                        onBookmarkClick = { vm.setShowBookmarks(true) },
-                        onSearchClick = { vm.setShowSearch(true) },
+                        onAiClick = { app -> quickLaunchAi(app) },
                         onSettingsClick = { vm.setShowSettings(true) }
                     )
                 }
@@ -148,7 +146,6 @@ class MainActivity : ComponentActivity() {
                                 .padding(end = 12.dp, bottom = 16.dp),
                             onZoomIn = { vm.setTextZoom(vm.textZoom.value + 10) },
                             onZoomOut = { vm.setTextZoom(vm.textZoom.value - 10) },
-                            onRotate = { toggleOrientation() },
                             onShare = { sharePage(vm.selectedText.value) },
                             onScreenshot = { captureWebView() }
                         )
@@ -219,6 +216,14 @@ class MainActivity : ComponentActivity() {
                 onTtsSpeed = { vm.setTtsSpeed(it) },
                 keywords = keywords,
                 onKeywords = { vm.setKeywords(it) },
+                onOpenSearch = {
+                    vm.setShowSettings(false)
+                    vm.setShowSearch(true)
+                },
+                onShowBookmarks = {
+                    vm.setShowSettings(false)
+                    vm.setShowBookmarks(true)
+                },
                 onShowHistory = {
                     vm.setShowSettings(false)
                     vm.setShowHistory(true)
@@ -275,6 +280,13 @@ class MainActivity : ComponentActivity() {
         return swipe
     }
 
+    /** 하단 바 AI 로고 탭 — 선택 텍스트가 있으면 함께 전달, 없으면 앱만 실행 */
+    private fun quickLaunchAi(app: AiApp) {
+        val text = vm.selectedText.value
+        vm.recordAiSend(app, text)
+        AiBarManager.launchExternalApp(this, app, text)
+    }
+
     /** AI 버튼 탭 — 로그인된 네이티브 AI 앱을 분할 화면으로 실행하고 텍스트 전달 */
     private fun openAiApp(app: AiApp, text: String) {
         if (text.isBlank()) {
@@ -306,15 +318,6 @@ class MainActivity : ComponentActivity() {
             putExtra(Intent.EXTRA_TEXT, text)
         }
         startActivity(Intent.createChooser(intent, "${app.displayName} 등 앱으로 보내기"))
-    }
-
-    private fun toggleOrientation() {
-        val landscape = vm.toggleLandscape()
-        requestedOrientation = if (landscape) {
-            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        } else {
-            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        }
     }
 
     private fun sharePage(selected: String) {

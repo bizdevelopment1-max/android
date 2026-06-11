@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -86,13 +90,30 @@ fun AiSelectionBar(
                                 onLongClick = { onAiLongClick(app) }
                             )
                         ) {
-                            Text(
-                                app.displayName,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.labelLarge,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Surface(
+                                    color = Color.White,
+                                    shape = RoundedCornerShape(50)
+                                ) {
+                                    Image(
+                                        painter = painterResource(app.iconRes),
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(22.dp)
+                                            .padding(3.dp)
+                                    )
+                                }
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    app.displayName,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
                         }
                     }
                     IconButton(onClick = onTts) {

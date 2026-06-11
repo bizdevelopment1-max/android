@@ -20,12 +20,13 @@ enum class AiApp(
     val displayName: String,
     val color: Long,
     val packageName: String,
+    val iconRes: Int,
     private val queryUrl: String
 ) {
-    CHATGPT("ChatGPT", 0xFF10A37F, "com.openai.chatgpt", "https://chatgpt.com/?q="),
-    GEMINI("Gemini", 0xFF4285F4, "com.google.android.apps.bard", "https://gemini.google.com/app?q="),
-    CLAUDE("Claude", 0xFFD97757, "com.anthropic.claude", "https://claude.ai/new?q="),
-    PERPLEXITY("Perplexity", 0xFF7C3AED, "ai.perplexity.app.android", "https://www.perplexity.ai/search?q=");
+    CHATGPT("ChatGPT", 0xFF10A37F, "com.openai.chatgpt", R.drawable.ic_ai_chatgpt, "https://chatgpt.com/?q="),
+    GEMINI("Gemini", 0xFF4285F4, "com.google.android.apps.bard", R.drawable.ic_ai_gemini, "https://gemini.google.com/app?q="),
+    CLAUDE("Claude", 0xFFD97757, "com.anthropic.claude", R.drawable.ic_ai_claude, "https://claude.ai/new?q="),
+    PERPLEXITY("Perplexity", 0xFF20808D, "ai.perplexity.app.android", R.drawable.ic_ai_perplexity, "https://www.perplexity.ai/search?q=");
 
     fun urlFor(text: String): String =
         if (text.isBlank()) queryUrl.substringBefore("?")

@@ -18,7 +18,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,6 +46,8 @@ fun SettingsSheet(
     onTtsSpeed: (Float) -> Unit,
     keywords: String,
     onKeywords: (String) -> Unit,
+    onOpenSearch: () -> Unit,
+    onShowBookmarks: () -> Unit,
     onShowHistory: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -101,9 +105,19 @@ fun SettingsSheet(
             )
             Spacer(Modifier.height(8.dp))
 
-            TextButton(onClick = onShowHistory) {
-                Icon(Icons.Filled.History, contentDescription = null)
-                Text("  AI 전송 히스토리 보기")
+            Row {
+                TextButton(onClick = onOpenSearch) {
+                    Icon(Icons.Filled.Search, contentDescription = null)
+                    Text(" 검색")
+                }
+                TextButton(onClick = onShowBookmarks) {
+                    Icon(Icons.Filled.Bookmark, contentDescription = null)
+                    Text(" 북마크")
+                }
+                TextButton(onClick = onShowHistory) {
+                    Icon(Icons.Filled.History, contentDescription = null)
+                    Text(" AI 히스토리")
+                }
             }
             Spacer(Modifier.height(32.dp))
         }
