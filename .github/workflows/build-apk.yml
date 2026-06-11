@@ -1,0 +1,50 @@
+name: Build APK
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk BDHealth-debug.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BDHealth-debug-apk
+          path: BDHealth-debug.apk
+
+      - name: Publish APK to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: "BD Health APK (최신 빌드)"
+          body: |
+            최신 디버그 APK 자동 빌드입니다.
+            아래 Assets에서 `BDHealth-debug.apk`를 다운로드해 설치하세요.
+            (설치 시 "알 수 없는 앱 설치 허용"이 필요할 수 있습니다)
+          files: BDHealth-debug.apk
