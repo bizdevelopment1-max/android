@@ -48,24 +48,38 @@ object AiBarManager {
     }
 
     /**
-     * 외부 네이티브 AI 앱으로 텍스트 전송.
-     * 설치되어 있으면 ACTION_SEND(스플릿 화면 시도) → 런처 인텐트 순으로 시도하고,
-     * 없으면 웹 URL을 외부 브라우저로 연다. 텍스트는 항상 클립보드에 복사된다.
+     * 로그인된 네이티브 AI 앱을 분할 화면(LAUNCH_ADJACENT)으로 실행하고 텍스트를 전달.
+     * 시도 순서:
+     *  1) ACTION_SEND 공유 인텐트 — 텍스트가 AI 앱 입력으로 바로 들어감
+     *  2) 앱 딥링크 (https://…?q=텍스트) — 앱이 URL을 처리하면 질문이 채워짐
+     *  3) 앱 단순 실행 — 클립보드에서 붙여넣기
+     * 앱 미설치 시 웹 URL을 외부 브라우저로 연다. 텍스트는 항상 클립보드에 복사된다.
      */
     fun launchExternalApp(context: Context, app: AiApp, text: String) {
         if (text.isNotBlank()) copyToClipboard(context, text)
         val adjacentFlags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT
         if (isInstalled(context, app.packageName)) {
-            val send = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, text)
-                setPackage(app.packageName)
-                addFlags(adjacentFlags)
-            }
-            try {
-                context.startActivity(send)
-                return
-            } catch (_: Exception) {
+            if (text.isNotBlank()) {
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, text)
+                    setPackage(app.packageName)
+                    addFlags(adjacentFlags)
+                }
+                try {
+                    context.startActivity(send)
+                    return
+                } catch (_: Exception) {
+                }
+                val deepLink = Intent(Intent.ACTION_VIEW, Uri.parse(app.urlFor(text))).apply {
+                    setPackage(app.packageName)
+                    addFlags(adjacentFlags)
+                }
+                try {
+                    context.startActivity(deepLink)
+                    return
+                } catch (_: Exception) {
+                }
             }
             val launch = context.packageManager.getLaunchIntentForPackage(app.packageName)
             if (launch != null) {
@@ -80,6 +94,7 @@ object AiBarManager {
         }
         try {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(app.urlFor(text))).addFlags(adjacentFlags))
+            Toast.makeText(context, "${app.displayName} 앱이 없어 브라우저로 엽니다", Toast.LENGTH_SHORT).show()
         } catch (_: Exception) {
         }
     }

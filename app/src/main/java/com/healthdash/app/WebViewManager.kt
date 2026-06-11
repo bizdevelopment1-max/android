@@ -93,53 +93,6 @@ object WebViewManager {
         }
     }
 
-    /** 스플릿 뷰 상단에 띄울 AI 웹뷰 (로그인 세션 유지, 자동 입력 시도) */
-    @SuppressLint("SetJavaScriptEnabled")
-    fun createAiWebView(context: Context, textProvider: () -> String): WebView {
-        val wv = WebView(context)
-        wv.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            loadWithOverviewMode = true
-            useWideViewPort = true
-        }
-        wv.webChromeClient = WebChromeClient()
-        wv.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView?, url: String?) {
-                view?.postDelayed({ injectAutoFill(view, textProvider()) }, 1500)
-            }
-        }
-        return wv
-    }
-
-    /** AI 사이트 입력창에 선택 텍스트 자동 입력 시도 (실패해도 무해 — 클립보드 fallback) */
-    fun injectAutoFill(wv: WebView, text: String) {
-        if (text.isBlank()) return
-        val quoted = JSONObject.quote(text)
-        val js = """
-            (function() {
-              try {
-                var t = $quoted;
-                var el = document.querySelector('textarea, input[type=text], [contenteditable=true], div[role=textbox]');
-                if (!el) return;
-                el.focus();
-                if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
-                  if (el.value && el.value.length > 0) return;
-                  var proto = el.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
-                  var desc = Object.getOwnPropertyDescriptor(proto, 'value');
-                  if (desc && desc.set) desc.set.call(el, t); else el.value = t;
-                  el.dispatchEvent(new Event('input', { bubbles: true }));
-                } else {
-                  if (el.innerText && el.innerText.trim().length > 0) return;
-                  el.innerText = t;
-                  el.dispatchEvent(new InputEvent('input', { bubbles: true }));
-                }
-              } catch (e) {}
-            })();
-        """.trimIndent()
-        wv.evaluateJavascript(js, null)
-    }
-
     fun injectInitScript(wv: WebView) {
         wv.evaluateJavascript(INIT_SCRIPT, null)
     }

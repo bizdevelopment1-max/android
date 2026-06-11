@@ -34,20 +34,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _activeSection = MutableStateFlow("overview")
     val activeSection: StateFlow<String> = _activeSection.asStateFlow()
 
-    private val _splitRatio = MutableStateFlow(settings.splitRatio)
-    val splitRatio: StateFlow<Float> = _splitRatio.asStateFlow()
-
-    private val _isSplitMode = MutableStateFlow(false)
-    val isSplitMode: StateFlow<Boolean> = _isSplitMode.asStateFlow()
-
     private val _selectedText = MutableStateFlow("")
     val selectedText: StateFlow<String> = _selectedText.asStateFlow()
-
-    private val _currentAiApp = MutableStateFlow(AiApp.CHATGPT)
-    val currentAiApp: StateFlow<AiApp> = _currentAiApp.asStateFlow()
-
-    private val _pendingAiUrl = MutableStateFlow("")
-    val pendingAiUrl: StateFlow<String> = _pendingAiUrl.asStateFlow()
 
     private val _isOffline = MutableStateFlow(false)
     val isOffline: StateFlow<Boolean> = _isOffline.asStateFlow()
@@ -84,10 +72,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val highlights: StateFlow<List<HighlightEntity>> =
         repo.highlights.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-
-    /** 마지막으로 AI에 보낸 텍스트 (스플릿 뷰 자동 입력용) */
-    var lastAiText: String = ""
-        private set
 
     fun setTextZoom(value: Int) {
         val v = value.coerceIn(SettingsManager.MIN_ZOOM, SettingsManager.MAX_ZOOM)
@@ -147,35 +131,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         settings.keywords = keywords
     }
 
-    fun openSplit(app: AiApp, text: String) {
-        lastAiText = text
-        _currentAiApp.value = app
-        _pendingAiUrl.value = app.urlFor(text)
-        _isSplitMode.value = true
+    /** AI 앱으로 보낸 텍스트를 히스토리에 기록 */
+    fun recordAiSend(app: AiApp, text: String) {
+        if (text.isBlank()) return
         _aiHistory.value = _aiHistory.value + AiHistoryItem(app, text)
-    }
-
-    fun switchAiApp(app: AiApp) {
-        _currentAiApp.value = app
-        _pendingAiUrl.value = app.urlFor(lastAiText)
-        if (lastAiText.isNotBlank()) {
-            _aiHistory.value = _aiHistory.value + AiHistoryItem(app, lastAiText)
-        }
-    }
-
-    fun closeSplit() {
-        _isSplitMode.value = false
-        _pendingAiUrl.value = ""
-    }
-
-    fun setSplitRatio(ratio: Float) {
-        val r = ratio.coerceIn(SplitViewController.MIN_RATIO, SplitViewController.MAX_RATIO)
-        _splitRatio.value = r
-        settings.splitRatio = r
-    }
-
-    fun resetSplitRatio() {
-        setSplitRatio(SplitViewController.DEFAULT_RATIO)
     }
 
     /** 하단 탭에서 이전/다음 섹션으로 한 칸 이동. 이동한 탭 id 반환 */

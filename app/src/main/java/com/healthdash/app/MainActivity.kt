@@ -34,17 +34,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import com.healthdash.app.ui.AiPanelTopBar
 import com.healthdash.app.ui.AiSelectionBar
 import com.healthdash.app.ui.BookmarkSheet
 import com.healthdash.app.ui.BottomNavBar
@@ -53,7 +49,6 @@ import com.healthdash.app.ui.HealthDashTheme
 import com.healthdash.app.ui.HistorySheet
 import com.healthdash.app.ui.SearchOverlay
 import com.healthdash.app.ui.SettingsSheet
-import com.healthdash.app.ui.SplitViewHandle
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -61,7 +56,6 @@ class MainActivity : ComponentActivity() {
     private val vm: MainViewModel by viewModels()
     private lateinit var appSettings: SettingsManager
     private var dashWebView: WebView? = null
-    private var aiWebView: WebView? = null
     private var ttsManager: TtsManager? = null
     private var lastSearchQuery: String = ""
 
@@ -81,12 +75,8 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun MainScreen() {
         val textZoom by vm.textZoom.collectAsState()
-        val isSplit by vm.isSplitMode.collectAsState()
-        val splitRatio by vm.splitRatio.collectAsState()
         val selectedText by vm.selectedText.collectAsState()
         val activeSection by vm.activeSection.collectAsState()
-        val currentAiApp by vm.currentAiApp.collectAsState()
-        val pendingAiUrl by vm.pendingAiUrl.collectAsState()
         val isLoading by vm.isLoading.collectAsState()
         val isOffline by vm.isOffline.collectAsState()
         val bookmarks by vm.bookmarks.collectAsState()
@@ -100,7 +90,6 @@ class MainActivity : ComponentActivity() {
         val keywords by vm.keywords.collectAsState()
         val dark = isSystemInDarkTheme()
         val snackbarHostState = remember { SnackbarHostState() }
-        var containerHeightPx by remember { mutableFloatStateOf(0f) }
 
         LaunchedEffect(textZoom) {
             dashWebView?.settings?.textZoom = textZoom
@@ -112,11 +101,8 @@ class MainActivity : ComponentActivity() {
             if (isOffline) snackbarHostState.showSnackbar("오프라인 — 캐시 데이터 표시 중")
         }
 
-        BackHandler(enabled = isSplit || showSearch) {
-            when {
-                showSearch -> vm.setShowSearch(false)
-                isSplit -> vm.closeSplit()
-            }
+        BackHandler(enabled = showSearch) {
+            vm.setShowSearch(false)
         }
 
         Box(Modifier.fillMaxSize()) {
@@ -143,49 +129,11 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .onSizeChanged { containerHeightPx = it.height.toFloat() }
                 ) {
-                    if (isSplit) {
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .weight(splitRatio)
-                        ) {
-                            AiPanelTopBar(
-                                current = currentAiApp,
-                                onSwitch = { app -> vm.switchAiApp(app) },
-                                onHistory = { vm.setShowHistory(true) }
-                            )
-                            AndroidView(
-                                factory = { ctx ->
-                                    WebViewManager.createAiWebView(ctx) { vm.lastAiText }
-                                        .also { aiWebView = it }
-                                },
-                                update = { wv ->
-                                    if (pendingAiUrl.isNotEmpty() && wv.tag != pendingAiUrl) {
-                                        wv.tag = pendingAiUrl
-                                        wv.loadUrl(pendingAiUrl)
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                            )
-                        }
-                        SplitViewHandle(
-                            onDrag = { dy ->
-                                vm.setSplitRatio(
-                                    SplitViewController.applyDrag(vm.splitRatio.value, dy, containerHeightPx)
-                                )
-                            },
-                            onDoubleTap = { vm.resetSplitRatio() },
-                            onClose = { vm.closeSplit() }
-                        )
-                    }
                     Box(
                         Modifier
                             .fillMaxWidth()
-                            .weight(if (isSplit) 1f - splitRatio else 1f)
+                            .weight(1f)
                     ) {
                         AndroidView(
                             factory = { ctx -> createDashboardView(ctx) },
@@ -209,10 +157,8 @@ class MainActivity : ComponentActivity() {
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth(),
                             selectedText = selectedText,
-                            onAiClick = { app -> openAiInSplit(app, vm.selectedText.value) },
-                            onAiLongClick = { app ->
-                                AiBarManager.launchExternalApp(this@MainActivity, app, vm.selectedText.value)
-                            },
+                            onAiClick = { app -> openAiApp(app, vm.selectedText.value) },
+                            onAiLongClick = { app -> shareToApps(app, vm.selectedText.value) },
                             onTts = { ttsManager?.speak(vm.selectedText.value, vm.ttsSpeed.value) },
                             onTranslate = { translateSelected(vm.selectedText.value) },
                             onHighlight = {
@@ -273,6 +219,10 @@ class MainActivity : ComponentActivity() {
                 onTtsSpeed = { vm.setTtsSpeed(it) },
                 keywords = keywords,
                 onKeywords = { vm.setKeywords(it) },
+                onShowHistory = {
+                    vm.setShowSettings(false)
+                    vm.setShowHistory(true)
+                },
                 onDismiss = { vm.setShowSettings(false) }
             )
         }
@@ -325,15 +275,37 @@ class MainActivity : ComponentActivity() {
         return swipe
     }
 
-    /** AI 버튼 탭 — 클립보드 복사 후 스플릿 뷰에 해당 AI 웹 열기 */
-    private fun openAiInSplit(app: AiApp, text: String) {
+    /** AI 버튼 탭 — 로그인된 네이티브 AI 앱을 분할 화면으로 실행하고 텍스트 전달 */
+    private fun openAiApp(app: AiApp, text: String) {
+        if (text.isBlank()) {
+            Toast.makeText(this, "먼저 본문에서 텍스트를 선택하세요", Toast.LENGTH_SHORT).show()
+            return
+        }
+        vm.recordAiSend(app, text)
+        val installed = AiBarManager.isInstalled(this, app.packageName)
+        AiBarManager.launchExternalApp(this, app, text)
+        if (installed && !isInMultiWindowMode) {
+            Toast.makeText(
+                this,
+                "${app.displayName} 실행 — 분할 화면을 원하면 최근 앱(□) 버튼에서 '화면 분할'을 선택하세요",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    /** AI 버튼 길게 누름 — 공유 시트로 원하는 앱 직접 선택 */
+    private fun shareToApps(app: AiApp, text: String) {
         if (text.isBlank()) {
             Toast.makeText(this, "먼저 본문에서 텍스트를 선택하세요", Toast.LENGTH_SHORT).show()
             return
         }
         AiBarManager.copyToClipboard(this, text)
-        vm.openSplit(app, text)
-        Toast.makeText(this, "클립보드에 복사됨 — ${app.displayName} 입력창에 자동 입력을 시도합니다", Toast.LENGTH_SHORT).show()
+        vm.recordAiSend(app, text)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        startActivity(Intent.createChooser(intent, "${app.displayName} 등 앱으로 보내기"))
     }
 
     private fun toggleOrientation() {

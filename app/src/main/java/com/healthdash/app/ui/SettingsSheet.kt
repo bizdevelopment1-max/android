@@ -16,6 +16,10 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +44,7 @@ fun SettingsSheet(
     onTtsSpeed: (Float) -> Unit,
     keywords: String,
     onKeywords: (String) -> Unit,
+    onShowHistory: () -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -94,7 +99,13 @@ fun SettingsSheet(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(8.dp))
+
+            TextButton(onClick = onShowHistory) {
+                Icon(Icons.Filled.History, contentDescription = null)
+                Text("  AI 전송 히스토리 보기")
+            }
+            Spacer(Modifier.height(32.dp))
         }
     }
 }

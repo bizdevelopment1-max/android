@@ -37,7 +37,8 @@ import com.healthdash.app.AiApp
 
 /**
  * 텍스트 선택 시 슬라이드업되는 AI 선택 바.
- * 탭: 인앱 스플릿 뷰로 열기 / 길게 누르기: 외부 네이티브 앱으로 보내기
+ * 탭: 로그인된 네이티브 AI 앱을 분할 화면으로 실행 + 텍스트 전달
+ * 길게 누르기: 공유 시트로 원하는 앱 직접 선택
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
