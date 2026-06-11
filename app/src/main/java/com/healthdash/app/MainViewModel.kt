@@ -7,6 +7,7 @@ import com.healthdash.app.data.AppDatabase
 import com.healthdash.app.data.BookmarkEntity
 import com.healthdash.app.data.HighlightEntity
 import com.healthdash.app.ui.NAV_TABS
+import com.healthdash.app.ui.NavTab
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -60,6 +61,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _keywords = MutableStateFlow(settings.keywords)
     val keywords: StateFlow<String> = _keywords.asStateFlow()
+
+    private val _barVisible = MutableStateFlow(true)
+    val barVisible: StateFlow<Boolean> = _barVisible.asStateFlow()
+
+    private val _barScale = MutableStateFlow(settings.barScale)
+    val barScale: StateFlow<Float> = _barScale.asStateFlow()
 
     private val _aiHistory = MutableStateFlow<List<AiHistoryItem>>(emptyList())
     val aiHistory: StateFlow<List<AiHistoryItem>> = _aiHistory.asStateFlow()
@@ -123,19 +130,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         settings.keywords = keywords
     }
 
+    fun setBarVisible(visible: Boolean) {
+        _barVisible.value = visible
+    }
+
+    fun setBarScale(scale: Float) {
+        val s = scale.coerceIn(0.7f, 1.4f)
+        _barScale.value = s
+        settings.barScale = s
+    }
+
     /** AI 앱으로 보낸 텍스트를 히스토리에 기록 */
     fun recordAiSend(app: AiApp, text: String) {
         if (text.isBlank()) return
         _aiHistory.value = _aiHistory.value + AiHistoryItem(app, text)
     }
 
-    /** 하단 탭에서 이전/다음 섹션으로 한 칸 이동. 이동한 탭 id 반환 */
-    fun moveSection(delta: Int): String {
+    /** 하단 탭에서 이전/다음 섹션으로 한 칸 이동. 이동한 탭 반환 */
+    fun moveSection(delta: Int): NavTab {
         val idx = NAV_TABS.indexOfFirst { it.id == _activeSection.value }
         val next = (if (idx < 0) 0 else idx + delta).coerceIn(0, NAV_TABS.size - 1)
         val tab = NAV_TABS[next]
         _activeSection.value = tab.id
-        return tab.id
+        return tab
     }
 
     fun addCurrentBookmark() {

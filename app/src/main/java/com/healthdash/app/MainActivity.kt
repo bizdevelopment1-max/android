@@ -43,6 +43,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.healthdash.app.ui.AiSelectionBar
 import com.healthdash.app.ui.BookmarkSheet
 import com.healthdash.app.ui.BottomNavBar
+import com.healthdash.app.ui.CollapsedBarHandle
 import com.healthdash.app.ui.FabGroup
 import com.healthdash.app.ui.HealthDashTheme
 import com.healthdash.app.ui.HistorySheet
@@ -87,6 +88,8 @@ class MainActivity : ComponentActivity() {
         val highContrast by vm.highContrast.collectAsState()
         val ttsSpeed by vm.ttsSpeed.collectAsState()
         val keywords by vm.keywords.collectAsState()
+        val barVisible by vm.barVisible.collectAsState()
+        val barScale by vm.barScale.collectAsState()
         val dark = isSystemInDarkTheme()
         val snackbarHostState = remember { SnackbarHostState() }
 
@@ -106,53 +109,38 @@ class MainActivity : ComponentActivity() {
 
         Box(Modifier.fillMaxSize()) {
             Scaffold(
-                snackbarHost = { SnackbarHost(snackbarHostState) },
-                bottomBar = {
-                    BottomNavBar(
-                        activeSection = activeSection,
-                        onTabClick = { tab ->
-                            vm.setActiveSection(tab.id)
-                            dashWebView?.let { WebViewManager.navigateToSection(it, tab.id) }
-                        },
-                        onMoveSection = { delta ->
-                            val id = vm.moveSection(delta)
-                            dashWebView?.let { WebViewManager.navigateToSection(it, id) }
-                        },
-                        onAiClick = { app -> quickLaunchAi(app) },
-                        onSettingsClick = { vm.setShowSettings(true) }
-                    )
-                }
+                snackbarHost = { SnackbarHost(snackbarHostState) }
             ) { padding ->
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
                 ) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
+                    AndroidView(
+                        factory = { ctx -> createDashboardView(ctx) },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    }
+                    FabGroup(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 12.dp, bottom = 110.dp),
+                        onZoomIn = { vm.setTextZoom(vm.textZoom.value + 10) },
+                        onZoomOut = { vm.setTextZoom(vm.textZoom.value - 10) },
+                        onShare = { sharePage(vm.selectedText.value) },
+                        onScreenshot = { captureWebView() }
+                    )
+                    // 반투명 플로팅 하단 영역: AI 선택 바 + 접을 수 있는 내비 바
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        AndroidView(
-                            factory = { ctx -> createDashboardView(ctx) },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                        if (isLoading) {
-                            CircularProgressIndicator(Modifier.align(Alignment.Center))
-                        }
-                        FabGroup(
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(end = 12.dp, bottom = 16.dp),
-                            onZoomIn = { vm.setTextZoom(vm.textZoom.value + 10) },
-                            onZoomOut = { vm.setTextZoom(vm.textZoom.value - 10) },
-                            onShare = { sharePage(vm.selectedText.value) },
-                            onScreenshot = { captureWebView() }
-                        )
                         AiSelectionBar(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(),
                             selectedText = selectedText,
                             onAiClick = { app -> openAiApp(app, vm.selectedText.value) },
                             onAiLongClick = { app -> shareToApps(app, vm.selectedText.value) },
@@ -165,6 +153,25 @@ class MainActivity : ComponentActivity() {
                                 Toast.makeText(this@MainActivity, "하이라이트 저장됨", Toast.LENGTH_SHORT).show()
                             }
                         )
+                        if (barVisible) {
+                            BottomNavBar(
+                                activeSection = activeSection,
+                                barScale = barScale,
+                                onTabClick = { tab ->
+                                    vm.setActiveSection(tab.id)
+                                    dashWebView?.let { WebViewManager.navigateToSection(it, tab.id, tab.label) }
+                                },
+                                onMoveSection = { delta ->
+                                    val tab = vm.moveSection(delta)
+                                    dashWebView?.let { WebViewManager.navigateToSection(it, tab.id, tab.label) }
+                                },
+                                onAiClick = { app -> quickLaunchAi(app) },
+                                onSettingsClick = { vm.setShowSettings(true) },
+                                onCollapse = { vm.setBarVisible(false) }
+                            )
+                        } else {
+                            CollapsedBarHandle(onExpand = { vm.setBarVisible(true) })
+                        }
                     }
                 }
             }
@@ -191,7 +198,7 @@ class MainActivity : ComponentActivity() {
                 bookmarks = bookmarks,
                 onSelect = { bookmark ->
                     vm.setActiveSection(bookmark.sectionId)
-                    dashWebView?.let { WebViewManager.navigateToSection(it, bookmark.sectionId) }
+                    dashWebView?.let { WebViewManager.navigateToSection(it, bookmark.sectionId, bookmark.label) }
                     vm.setShowBookmarks(false)
                 },
                 onDelete = { vm.deleteBookmark(it) },
@@ -214,6 +221,8 @@ class MainActivity : ComponentActivity() {
                 },
                 ttsSpeed = ttsSpeed,
                 onTtsSpeed = { vm.setTtsSpeed(it) },
+                barScale = barScale,
+                onBarScale = { vm.setBarScale(it) },
                 keywords = keywords,
                 onKeywords = { vm.setKeywords(it) },
                 onOpenSearch = {

@@ -97,11 +97,21 @@ object WebViewManager {
         wv.evaluateJavascript(INIT_SCRIPT, null)
     }
 
-    /** 탭 → 해당 섹션 스크롤 (DASH_NAV 없으면 scrollIntoView 폴백) */
-    fun navigateToSection(wv: WebView, sectionId: String) {
-        val js = "if (window.DASH_NAV) { window.DASH_NAV('" + sectionId + "'); } " +
-            "else { var el = document.getElementById('" + sectionId + "'); " +
-            "if (el) el.scrollIntoView({behavior:'smooth'}); }"
+    /**
+     * 탭 → 해당 섹션 이동.
+     * HD_NAV가 ①사이트 DASH_NAV → ②id 스크롤 → ③사이트 내비 클릭(라벨 매칭) → ④제목 매칭 스크롤
+     * 순으로 폴백 처리한다.
+     */
+    fun navigateToSection(wv: WebView, sectionId: String, label: String) {
+        val idQ = JSONObject.quote(sectionId)
+        val labelQ = JSONObject.quote(label)
+        val js = """
+            (function() {
+              if (window.HD_NAV) { window.HD_NAV($idQ, $labelQ); return; }
+              var el = document.getElementById($idQ);
+              if (el) el.scrollIntoView({behavior:'smooth'});
+            })();
+        """.trimIndent()
         wv.evaluateJavascript(js, null)
     }
 
@@ -204,20 +214,44 @@ object WebViewManager {
             } catch (e) {}
           });
 
-          // 네이티브 탭에서 섹션 이동 지원
-          window.DASH_NAV = window.DASH_NAV || function(sectionId) {
-            var mapping = {
-              overview: 'overview', device: 'device', ai: 'ai', startup: 'startup',
-              vp: 'vp', articles: 'articles', charts: 'charts', monthly: 'monthly',
-              insights: 'insights', dynamics: 'dynamics', bizmodel: 'bizmodel', reports: 'reports'
-            };
-            var el = document.getElementById(mapping[sectionId] || sectionId);
-            var mainScroll = document.querySelector('.main-scroll, main, #root > div > div:last-child');
-            if (el && mainScroll && mainScroll.scrollHeight > mainScroll.clientHeight) {
-              mainScroll.scrollTo({ top: el.offsetTop - 12, behavior: 'smooth' });
-            } else if (el) {
-              el.scrollIntoView({ behavior: 'smooth' });
+          // 네이티브 탭에서 섹션 이동 — 어떤 페이지 구조에서도 동작하도록 다단계 폴백
+          window.HD_NAV = function(id, label) {
+            function norm(s) { return (s || '').replace(/\s+/g, '').toLowerCase(); }
+            function scrollToEl(el) {
+              try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return true; } catch (e) { return false; }
             }
+            try {
+              // 1) 사이트가 자체 제공하는 내비 훅
+              if (typeof window.DASH_NAV === 'function') {
+                try { window.DASH_NAV(id); } catch (e) {}
+              }
+              // 2) 섹션 id로 직접 스크롤
+              var el = document.getElementById(id);
+              if (el) return scrollToEl(el);
+              el = document.querySelector('[data-section="' + id + '"]');
+              if (el) return scrollToEl(el);
+              var target = norm(label);
+              if (!target) return false;
+              // 3) 사이트 자체 내비게이션(탭/메뉴)에서 같은 라벨을 찾아 클릭 (SPA 탭 전환 대응)
+              var navs = document.querySelectorAll('a, button, [role="tab"], [role="button"], li, nav span, [class*="tab"], [class*="nav"], [class*="menu"]');
+              for (var i = 0; i < navs.length; i++) {
+                var t = norm(navs[i].textContent);
+                if (!t || t.length > 24) continue;
+                if (t === target || t.indexOf(target) >= 0 || (target.indexOf(t) >= 0 && t.length >= 2)) {
+                  try { navs[i].click(); return true; } catch (e) {}
+                }
+              }
+              // 4) 본문 제목 텍스트 매칭으로 스크롤
+              var heads = document.querySelectorAll('h1, h2, h3, h4, [class*="title"], [class*="header"], [class*="head"]');
+              for (var j = 0; j < heads.length; j++) {
+                var ht = norm(heads[j].textContent);
+                if (!ht || ht.length > 40) continue;
+                if (ht.indexOf(target) >= 0 || (target.indexOf(ht) >= 0 && ht.length >= 2)) {
+                  return scrollToEl(heads[j]);
+                }
+              }
+            } catch (e) {}
+            return false;
           };
 
           // 검색 지원

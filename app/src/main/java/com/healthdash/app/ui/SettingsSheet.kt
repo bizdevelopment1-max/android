@@ -44,6 +44,8 @@ fun SettingsSheet(
     onHighContrast: (Boolean) -> Unit,
     ttsSpeed: Float,
     onTtsSpeed: (Float) -> Unit,
+    barScale: Float,
+    onBarScale: (Float) -> Unit,
     keywords: String,
     onKeywords: (String) -> Unit,
     onOpenSearch: () -> Unit,
@@ -80,6 +82,17 @@ fun SettingsSheet(
                 Switch(checked = highContrast, onCheckedChange = onHighContrast)
             }
             Spacer(Modifier.height(16.dp))
+
+            Text(
+                "하단 바 크기: ${(barScale * 100).toInt()}%",
+                style = MaterialTheme.typography.titleSmall
+            )
+            Slider(
+                value = barScale,
+                onValueChange = onBarScale,
+                valueRange = 0.7f..1.4f
+            )
+            Spacer(Modifier.height(8.dp))
 
             Text(
                 "TTS 읽기 속도: ${String.format(Locale.US, "%.1f", ttsSpeed)}x",

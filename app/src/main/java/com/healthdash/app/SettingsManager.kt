@@ -25,6 +25,10 @@ class SettingsManager(context: Context) {
         get() = prefs.getString(KEY_KEYWORDS, "") ?: ""
         set(value) = prefs.edit().putString(KEY_KEYWORDS, value).apply()
 
+    var barScale: Float
+        get() = prefs.getFloat(KEY_BAR_SCALE, 1.0f)
+        set(value) = prefs.edit().putFloat(KEY_BAR_SCALE, value.coerceIn(0.7f, 1.4f)).apply()
+
     companion object {
         const val MIN_ZOOM = 70
         const val MAX_ZOOM = 200
@@ -32,5 +36,6 @@ class SettingsManager(context: Context) {
         private const val KEY_HIGH_CONTRAST = "highContrast"
         private const val KEY_TTS_SPEED = "ttsSpeed"
         private const val KEY_KEYWORDS = "keywords"
+        private const val KEY_BAR_SCALE = "barScale"
     }
 }

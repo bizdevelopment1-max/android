@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Insights
@@ -40,9 +42,7 @@ import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
@@ -75,18 +76,28 @@ val NAV_TABS = listOf(
     NavTab("reports", "리서치 리포트", Icons.Filled.Description, Color(0xFF6A1B9A))
 )
 
+/** 바 상단의 컬러 스트립에 쓰이는 액센트 그라데이션 */
+private val ACCENT_STRIP = listOf(
+    Color(0xFF1428A0), Color(0xFF7B1FA2), Color(0xFFC62828),
+    Color(0xFFEF6C00), Color(0xFF2E7D32), Color(0xFF00838F), Color(0xFF1428A0)
+)
+
 /**
- * 하단 바 — ◀ ▶ 화살표(고정)를 제외한 모든 항목이 함께 슬라이드:
- * 섹션 탭 12개(탭별 고유 색상 + 선택 애니메이션) + AI 4사 로고 + 설정.
+ * 반투명 플로팅 하단 바 — 콘텐츠 위에 떠 있어 뒤가 비쳐 보인다.
+ * ◀ ▶ 화살표(고정)로 한 칸씩 이동, 나머지(탭 12개 + AI 로고 4개 + 설정)는 함께 슬라이드.
+ * 우측 ˅ 핸들로 접을 수 있고, barScale로 전체 크기 조절(설정에서 변경).
  */
 @Composable
 fun BottomNavBar(
     activeSection: String,
+    barScale: Float,
     onTabClick: (NavTab) -> Unit,
     onMoveSection: (Int) -> Unit,
     onAiClick: (AiApp) -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onCollapse: () -> Unit
 ) {
+    val s = barScale.coerceIn(0.7f, 1.4f)
     val scrollState = rememberScrollState()
     val activeIndex = NAV_TABS.indexOfFirst { it.id == activeSection }
 
@@ -98,7 +109,24 @@ fun BottomNavBar(
         }
     }
 
-    Surface(tonalElevation = 3.dp, shadowElevation = 8.dp) {
+    val surface = MaterialTheme.colorScheme.surface
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(surface.copy(alpha = 0.60f), surface.copy(alpha = 0.90f))
+                )
+            )
+    ) {
+        // 상단 액센트 컬러 스트립
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.5.dp)
+                .background(Brush.horizontalGradient(ACCENT_STRIP))
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -119,17 +147,14 @@ fun BottomNavBar(
                         label = tab.label,
                         accent = tab.accent,
                         active = tab.id == activeSection,
+                        scale = s,
                         onClick = { onTabClick(tab) }
-                    ) { tint ->
-                        Icon(tab.icon, contentDescription = tab.label, tint = tint, modifier = Modifier.size(22.dp))
+                    ) { tint, iconSize ->
+                        Icon(tab.icon, contentDescription = tab.label, tint = tint, modifier = Modifier.size(iconSize))
                     }
                 }
 
-                VerticalDivider(
-                    modifier = Modifier
-                        .height(36.dp)
-                        .padding(horizontal = 6.dp)
-                )
+                BarDivider()
 
                 // AI 4사 로고 버튼 — 탭하면 해당 AI 앱 실행 (선택 텍스트가 있으면 함께 전달)
                 AiApp.entries.forEach { app ->
@@ -138,50 +163,91 @@ fun BottomNavBar(
                         accent = Color(app.color),
                         active = false,
                         alwaysAccentLabel = true,
+                        scale = s,
                         onClick = { onAiClick(app) }
-                    ) { _ ->
+                    ) { _, iconSize ->
                         Image(
                             painter = painterResource(app.iconRes),
                             contentDescription = app.displayName,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(iconSize)
                         )
                     }
                 }
 
-                VerticalDivider(
-                    modifier = Modifier
-                        .height(36.dp)
-                        .padding(horizontal = 6.dp)
-                )
+                BarDivider()
 
                 BarItem(
                     label = "설정",
                     accent = MaterialTheme.colorScheme.primary,
                     active = false,
+                    scale = s,
                     onClick = onSettingsClick
-                ) { tint ->
-                    Icon(Icons.Filled.Settings, contentDescription = "설정", tint = tint, modifier = Modifier.size(22.dp))
+                ) { tint, iconSize ->
+                    Icon(Icons.Filled.Settings, contentDescription = "설정", tint = tint, modifier = Modifier.size(iconSize))
                 }
                 Spacer(Modifier.width(4.dp))
             }
             IconButton(onClick = { onMoveSection(1) }, enabled = activeIndex < NAV_TABS.size - 1) {
                 Icon(Icons.Filled.ChevronRight, contentDescription = "다음 탭")
             }
+            IconButton(onClick = onCollapse) {
+                Icon(
+                    Icons.Filled.ExpandMore,
+                    contentDescription = "하단 바 접기",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
+/** 접힌 상태에서 하단 바를 다시 펼치는 작은 핸들 */
+@Composable
+fun CollapsedBarHandle(onExpand: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .padding(bottom = 4.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
+            .clickable { onExpand() }
+            .navigationBarsPadding()
+            .padding(horizontal = 18.dp, vertical = 4.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.ExpandLess,
+                contentDescription = "하단 바 펼치기",
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Text("메뉴", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+@Composable
+private fun BarDivider() {
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 6.dp)
+            .width(1.dp)
+            .height(34.dp)
+            .background(MaterialTheme.colorScheme.outlineVariant)
+    )
+}
+
 /**
- * 하단 바 공통 아이템 — 선택 시 고유 색상 필 배경 + 스프링 바운스 + 색상 전환 애니메이션
+ * 하단 바 공통 아이템 — 선택 시 고유 색상 필 배경 + 스프링 바운스 + 색상 전환 애니메이션.
+ * scale로 아이콘/글자/여백 크기를 함께 조절한다.
  */
 @Composable
 private fun BarItem(
     label: String,
     accent: Color,
     active: Boolean,
+    scale: Float,
     alwaysAccentLabel: Boolean = false,
     onClick: () -> Unit,
-    icon: @Composable (Color) -> Unit
+    icon: @Composable (Color, androidx.compose.ui.unit.Dp) -> Unit
 ) {
     val neutral = MaterialTheme.colorScheme.onSurfaceVariant
     val pillColor by animateColorAsState(
@@ -203,21 +269,21 @@ private fun BarItem(
 
     Column(
         modifier = Modifier
-            .padding(horizontal = 2.dp, vertical = 4.dp)
+            .padding(horizontal = 2.dp, vertical = (4 * scale).dp)
             .clip(RoundedCornerShape(14.dp))
             .background(pillColor)
             .clickable { onClick() }
-            .padding(horizontal = 9.dp, vertical = 6.dp)
-            .widthIn(min = 48.dp),
+            .padding(horizontal = (9 * scale).dp, vertical = (6 * scale).dp)
+            .widthIn(min = (44 * scale).dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(Modifier.scale(iconScale)) {
-            icon(contentColor)
+            icon(contentColor, (22 * scale).dp)
         }
         Text(
             label,
             color = contentColor,
-            fontSize = 10.sp,
+            fontSize = (10 * scale).sp,
             fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
             maxLines = 1
         )
