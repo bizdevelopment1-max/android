@@ -7,6 +7,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +54,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -95,7 +97,8 @@ fun BottomNavBar(
     onMoveSection: (Int) -> Unit,
     onAiClick: (AiApp) -> Unit,
     onSettingsClick: () -> Unit,
-    onCollapse: () -> Unit
+    onCollapse: () -> Unit,
+    onScaleDrag: (Float) -> Unit
 ) {
     val s = barScale.coerceIn(0.7f, 1.4f)
     val scrollState = rememberScrollState()
@@ -120,13 +123,33 @@ fun BottomNavBar(
                 )
             )
     ) {
-        // 상단 액센트 컬러 스트립
+        // 상단 액센트 컬러 스트립 + 크기 조절 핸들 (위로 드래그 = 크게, 아래로 = 작게)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(2.5.dp)
-                .background(Brush.horizontalGradient(ACCENT_STRIP))
-        )
+                .height(16.dp)
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures { change, dragAmount ->
+                        change.consume()
+                        onScaleDrag(-dragAmount / 260f)
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.5.dp)
+                    .background(Brush.horizontalGradient(ACCENT_STRIP))
+            )
+            Box(
+                modifier = Modifier
+                    .width(44.dp)
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f))
+            )
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -219,7 +242,12 @@ fun CollapsedBarHandle(onExpand: () -> Unit) {
                 contentDescription = "하단 바 펼치기",
                 tint = MaterialTheme.colorScheme.primary
             )
-            Text("메뉴", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+            Text(
+                "BD Health",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }
@@ -254,9 +282,14 @@ private fun BarItem(
         targetValue = if (active) accent.copy(alpha = 0.15f) else Color.Transparent,
         label = "pill"
     )
-    val contentColor by animateColorAsState(
+    // 아이콘은 항상 고유 색상 (비활성 시 연하게), 레이블은 활성/AI 항목만 컬러
+    val iconColor by animateColorAsState(
+        targetValue = if (active) accent else accent.copy(alpha = 0.72f),
+        label = "icon"
+    )
+    val labelColor by animateColorAsState(
         targetValue = if (active || alwaysAccentLabel) accent else neutral,
-        label = "content"
+        label = "label"
     )
     val iconScale by animateFloatAsState(
         targetValue = if (active) 1.18f else 1f,
@@ -278,11 +311,11 @@ private fun BarItem(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(Modifier.scale(iconScale)) {
-            icon(contentColor, (22 * scale).dp)
+            icon(iconColor, (22 * scale).dp)
         }
         Text(
             label,
-            color = contentColor,
+            color = labelColor,
             fontSize = (10 * scale).sp,
             fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
             maxLines = 1

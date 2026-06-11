@@ -11,7 +11,6 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.KeyEvent
-import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -39,7 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.healthdash.app.ui.AiSelectionBar
 import com.healthdash.app.ui.BookmarkSheet
 import com.healthdash.app.ui.BottomNavBar
@@ -125,12 +123,14 @@ class MainActivity : ComponentActivity() {
                     }
                     FabGroup(
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(end = 12.dp, bottom = 110.dp),
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 10.dp),
                         onZoomIn = { vm.setTextZoom(vm.textZoom.value + 10) },
                         onZoomOut = { vm.setTextZoom(vm.textZoom.value - 10) },
-                        onShare = { sharePage(vm.selectedText.value) },
-                        onScreenshot = { captureWebView() }
+                        onScrollUp = { dashWebView?.let { WebViewManager.scrollPage(it, -0.35) } },
+                        onScrollDown = { dashWebView?.let { WebViewManager.scrollPage(it, 0.35) } },
+                        onPageUp = { dashWebView?.let { WebViewManager.scrollPage(it, -0.92) } },
+                        onPageDown = { dashWebView?.let { WebViewManager.scrollPage(it, 0.92) } }
                     )
                     // 반투명 플로팅 하단 영역: AI 선택 바 + 접을 수 있는 내비 바
                     Column(
@@ -167,7 +167,8 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onAiClick = { app -> quickLaunchAi(app) },
                                 onSettingsClick = { vm.setShowSettings(true) },
-                                onCollapse = { vm.setBarVisible(false) }
+                                onCollapse = { vm.setBarVisible(false) },
+                                onScaleDrag = { delta -> vm.setBarScale(vm.barScale.value + delta) }
                             )
                         } else {
                             CollapsedBarHandle(onExpand = { vm.setBarVisible(true) })
@@ -237,6 +238,18 @@ class MainActivity : ComponentActivity() {
                     vm.setShowSettings(false)
                     vm.setShowHistory(true)
                 },
+                onRefresh = {
+                    vm.setShowSettings(false)
+                    dashWebView?.reload()
+                },
+                onShare = {
+                    vm.setShowSettings(false)
+                    sharePage(vm.selectedText.value)
+                },
+                onScreenshot = {
+                    vm.setShowSettings(false)
+                    captureWebView()
+                },
                 onDismiss = { vm.setShowSettings(false) }
             )
         }
@@ -246,9 +259,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** 대시보드 WebView + PullToRefresh 컨테이너 생성 */
-    private fun createDashboardView(ctx: android.content.Context): SwipeRefreshLayout {
-        val swipe = SwipeRefreshLayout(ctx)
+    /** 대시보드 WebView 생성 (당겨서 새로고침 없음 — 새로고침은 설정 시트에서) */
+    private fun createDashboardView(ctx: android.content.Context): WebView {
         val wv = WebViewManager.createDashboardWebView(
             context = this,
             appSettings = appSettings,
@@ -261,7 +273,6 @@ class MainActivity : ComponentActivity() {
             },
             onProgress = { progress -> vm.setLoading(progress in 1..99) },
             onPageFinished = { web ->
-                swipe.isRefreshing = false
                 WebViewManager.injectInitScript(web)
                 WebViewManager.injectTheme(web, isDarkMode())
                 WebViewManager.injectHighContrast(web, vm.highContrast.value)
@@ -279,14 +290,10 @@ class MainActivity : ComponentActivity() {
                 Toast.makeText(this, "검색 결과 없음", Toast.LENGTH_SHORT).show()
             }
         }
+        WebViewManager.setOfflineMode(wv, vm.isOffline.value)
         dashWebView = wv
-        swipe.addView(
-            wv,
-            ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        )
-        swipe.setOnRefreshListener { wv.reload() }
         wv.loadUrl(WebViewManager.DASHBOARD_URL)
-        return swipe
+        return wv
     }
 
     /** 하단 바 AI 로고 탭 — 선택 텍스트가 있으면 함께 전달, 없으면 앱만 실행 */
@@ -394,10 +401,12 @@ class MainActivity : ComponentActivity() {
             cm.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
                     vm.setOffline(false)
+                    runOnUiThread { dashWebView?.let { WebViewManager.setOfflineMode(it, false) } }
                 }
 
                 override fun onLost(network: Network) {
                     vm.setOffline(true)
+                    runOnUiThread { dashWebView?.let { WebViewManager.setOfflineMode(it, true) } }
                 }
             })
         } catch (_: Exception) {

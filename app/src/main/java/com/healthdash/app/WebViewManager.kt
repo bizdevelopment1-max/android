@@ -55,7 +55,8 @@ object WebViewManager {
             builtInZoomControls = false
             textZoom = appSettings.textZoom
             userAgentString = "$userAgentString HealthDashApp/1.0"
-            cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+            // 온라인 시 항상 최신 콘텐츠, 오프라인 전환 시 MainActivity가 캐시 모드로 변경
+            cacheMode = WebSettings.LOAD_DEFAULT
         }
         wv.addJavascriptInterface(
             DashBridge(onTextSelected, onSectionVisible, onKeywordFound),
@@ -113,6 +114,17 @@ object WebViewManager {
             })();
         """.trimIndent()
         wv.evaluateJavascript(js, null)
+    }
+
+    /** 온라인/오프라인에 따라 캐시 모드 전환 */
+    fun setOfflineMode(wv: WebView, offline: Boolean) {
+        wv.settings.cacheMode =
+            if (offline) WebSettings.LOAD_CACHE_ELSE_NETWORK else WebSettings.LOAD_DEFAULT
+    }
+
+    /** 화면 높이의 fraction 배만큼 부드럽게 스크롤 (윈도우/내부 컨테이너 자동 감지) */
+    fun scrollPage(wv: WebView, fraction: Double) {
+        wv.evaluateJavascript("if (window.HD_SCROLL) window.HD_SCROLL($fraction);", null)
     }
 
     fun search(wv: WebView, query: String) {
@@ -257,6 +269,35 @@ object WebViewManager {
           // 검색 지원
           window.DASH_SEARCH = window.DASH_SEARCH || function(query) {
             window.dispatchEvent(new CustomEvent('nativeSearch', { detail: { query: query } }));
+          };
+
+          // 플로팅 버튼 스크롤 — 윈도우 또는 가장 큰 내부 스크롤 컨테이너를 자동 감지
+          window.HD_SCROLL = function(frac) {
+            try {
+              var dy = Math.round(window.innerHeight * frac);
+              var doc = document.scrollingElement || document.documentElement;
+              if (doc && doc.scrollHeight > window.innerHeight + 10) {
+                window.scrollBy({ top: dy, behavior: 'smooth' });
+                return true;
+              }
+              var el = window.__HD_SCROLL_EL__;
+              if (!el || !document.body.contains(el)) {
+                el = null;
+                var els = document.querySelectorAll('div, main, section');
+                for (var i = 0; i < els.length; i++) {
+                  var c = els[i];
+                  if (c.scrollHeight > c.clientHeight + 50 && c.clientHeight > window.innerHeight * 0.4) {
+                    var st = getComputedStyle(c);
+                    if (st.overflowY === 'auto' || st.overflowY === 'scroll' || st.overflow === 'auto') {
+                      if (!el || c.clientHeight > el.clientHeight) el = c;
+                    }
+                  }
+                }
+                window.__HD_SCROLL_EL__ = el;
+              }
+              if (el) { el.scrollBy({ top: dy, behavior: 'smooth' }); return true; }
+            } catch (e) {}
+            return false;
           };
 
           // 하이라이트 (첫 번째 일치 텍스트를 mark로 감쌈)

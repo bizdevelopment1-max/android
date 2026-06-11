@@ -20,7 +20,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,6 +54,9 @@ fun SettingsSheet(
     onOpenSearch: () -> Unit,
     onShowBookmarks: () -> Unit,
     onShowHistory: () -> Unit,
+    onRefresh: () -> Unit,
+    onShare: () -> Unit,
+    onScreenshot: () -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -130,6 +136,20 @@ fun SettingsSheet(
                 TextButton(onClick = onShowHistory) {
                     Icon(Icons.Filled.History, contentDescription = null)
                     Text(" AI 히스토리")
+                }
+            }
+            Row {
+                TextButton(onClick = onRefresh) {
+                    Icon(Icons.Filled.Refresh, contentDescription = null)
+                    Text(" 새로고침")
+                }
+                TextButton(onClick = onShare) {
+                    Icon(Icons.Filled.Share, contentDescription = null)
+                    Text(" 공유")
+                }
+                TextButton(onClick = onScreenshot) {
+                    Icon(Icons.Filled.PhotoCamera, contentDescription = null)
+                    Text(" 스크린샷")
                 }
             }
             Spacer(Modifier.height(32.dp))
