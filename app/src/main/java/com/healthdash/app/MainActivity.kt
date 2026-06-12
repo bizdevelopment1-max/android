@@ -56,6 +56,7 @@ class MainActivity : ComponentActivity() {
     private var dashWebView: WebView? = null
     private var ttsManager: TtsManager? = null
     private var lastSearchQuery: String = ""
+    private var loadRetryCount = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -130,7 +131,8 @@ class MainActivity : ComponentActivity() {
                         onScrollUp = { dashWebView?.let { WebViewManager.scrollPage(it, -0.35) } },
                         onScrollDown = { dashWebView?.let { WebViewManager.scrollPage(it, 0.35) } },
                         onPageUp = { dashWebView?.let { WebViewManager.scrollPage(it, -0.92) } },
-                        onPageDown = { dashWebView?.let { WebViewManager.scrollPage(it, 0.92) } }
+                        onPageDown = { dashWebView?.let { WebViewManager.scrollPage(it, 0.92) } },
+                        onRefresh = { reloadDashboard() }
                     )
                     // 반투명 플로팅 하단 영역: AI 선택 바 + 접을 수 있는 내비 바
                     Column(
@@ -273,11 +275,28 @@ class MainActivity : ComponentActivity() {
             },
             onProgress = { progress -> vm.setLoading(progress in 1..99) },
             onPageFinished = { web ->
+                loadRetryCount = 0
                 WebViewManager.injectInitScript(web)
                 WebViewManager.injectTheme(web, isDarkMode())
                 WebViewManager.injectHighContrast(web, vm.highContrast.value)
                 WebViewManager.injectKeywordCheck(web, vm.keywords.value)
                 vm.highlights.value.forEach { WebViewManager.injectHighlight(web, it.text) }
+            },
+            onMainFrameError = {
+                runOnUiThread {
+                    if (loadRetryCount < 2) {
+                        loadRetryCount++
+                        dashWebView?.postDelayed({
+                            if (!vm.isOffline.value) reloadDashboard()
+                        }, 2500)
+                    } else {
+                        Toast.makeText(
+                            this,
+                            "페이지 로드 실패 — 우측 새로고침 버튼을 눌러주세요",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
             }
         )
         WebViewManager.attachPinchZoom(
@@ -294,6 +313,17 @@ class MainActivity : ComponentActivity() {
         dashWebView = wv
         wv.loadUrl(WebViewManager.DASHBOARD_URL)
         return wv
+    }
+
+    /** 대시보드 새로고침 — URL이 비어 있으면(최초 로드 실패) 처음부터 다시 로드 */
+    private fun reloadDashboard() {
+        val wv = dashWebView ?: return
+        val url = wv.url
+        if (url.isNullOrBlank() || url == "about:blank") {
+            wv.loadUrl(WebViewManager.DASHBOARD_URL)
+        } else {
+            wv.reload()
+        }
     }
 
     /** 하단 바 AI 로고 탭 — 선택 텍스트가 있으면 함께 전달, 없으면 앱만 실행 */
@@ -420,6 +450,15 @@ class MainActivity : ComponentActivity() {
             return true
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 최초 로드가 실패한 채 복귀했으면 다시 시도
+        val wv = dashWebView
+        if (wv != null && (wv.url.isNullOrBlank() || wv.url == "about:blank")) {
+            wv.loadUrl(WebViewManager.DASHBOARD_URL)
+        }
     }
 
     override fun onDestroy() {

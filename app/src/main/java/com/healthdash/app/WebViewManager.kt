@@ -44,7 +44,8 @@ object WebViewManager {
         onSectionVisible: (String) -> Unit,
         onKeywordFound: (String) -> Unit,
         onProgress: (Int) -> Unit,
-        onPageFinished: (WebView) -> Unit
+        onPageFinished: (WebView) -> Unit,
+        onMainFrameError: () -> Unit
     ): WebView {
         val wv = WebView(context)
         wv.settings.apply {
@@ -77,6 +78,14 @@ object WebViewManager {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 view?.let(onPageFinished)
+            }
+
+            override fun onReceivedError(
+                view: WebView?,
+                request: android.webkit.WebResourceRequest?,
+                error: android.webkit.WebResourceError?
+            ) {
+                if (request?.isForMainFrame == true) onMainFrameError()
             }
         }
         return wv
@@ -216,6 +225,16 @@ object WebViewManager {
         (function() {
           if (window.__HD_INIT__) return;
           window.__HD_INIT__ = true;
+
+          // 모바일 뷰포트 강제 — viewport meta가 없으면 데스크톱처럼 렌더링되는 것 방지
+          try {
+            if (!document.querySelector('meta[name="viewport"]')) {
+              var mv = document.createElement('meta');
+              mv.name = 'viewport';
+              mv.content = 'width=device-width, initial-scale=1, maximum-scale=5';
+              document.head.appendChild(mv);
+            }
+          } catch (e) {}
 
           // 텍스트 선택 감지 → 네이티브 AI 바 표시
           document.addEventListener('selectionchange', function() {

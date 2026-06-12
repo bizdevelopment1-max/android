@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -51,7 +52,8 @@ fun FabGroup(
     onScrollUp: () -> Unit,
     onScrollDown: () -> Unit,
     onPageUp: () -> Unit,
-    onPageDown: () -> Unit
+    onPageDown: () -> Unit,
+    onRefresh: () -> Unit
 ) {
     var offsetY by remember { mutableFloatStateOf(0f) }
     var wakeTick by remember { mutableIntStateOf(0) }
@@ -89,6 +91,7 @@ fun FabGroup(
         FabButton(Icons.Filled.KeyboardArrowDown, Color(0xFF1B7A43), "아래로 스크롤", wake(onScrollDown))
         FabButton(Icons.Filled.KeyboardDoubleArrowUp, Color(0xFF00ACC1), "페이지 업", wake(onPageUp))
         FabButton(Icons.Filled.KeyboardDoubleArrowDown, Color(0xFF7CB342), "페이지 다운", wake(onPageDown))
+        FabButton(Icons.Filled.Refresh, Color(0xFF0288D1), "새로고침", wake(onRefresh))
     }
 }
 
