@@ -12,6 +12,8 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import org.json.JSONObject
 
 /** 웹 → 네이티브 콜백용 JavaScript Bridge (`window.AndroidBridge`) */
@@ -51,8 +53,10 @@ object WebViewManager {
         wv.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
-            loadWithOverviewMode = true
-            useWideViewPort = true
+            // 기기 폭 기준 레이아웃 = 모바일 버전 렌더링 강제
+            // (useWideViewPort=true는 viewport meta 없는 페이지를 데스크톱 폭으로 그림)
+            loadWithOverviewMode = false
+            useWideViewPort = false
             builtInZoomControls = false
             textZoom = appSettings.textZoom
             userAgentString = "$userAgentString HealthDashApp/1.0"
@@ -87,6 +91,13 @@ object WebViewManager {
             ) {
                 if (request?.isForMainFrame == true) onMainFrameError()
             }
+        }
+        // 가능하면 문서 시작 시점에 초기화 스크립트 주입 (선택 감지/내비를 더 일찍 활성화)
+        try {
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                WebViewCompat.addDocumentStartJavaScript(wv, INIT_SCRIPT, setOf("*"))
+            }
+        } catch (_: Exception) {
         }
         return wv
     }
@@ -226,15 +237,25 @@ object WebViewManager {
           if (window.__HD_INIT__) return;
           window.__HD_INIT__ = true;
 
-          // 모바일 뷰포트 강제 — viewport meta가 없으면 데스크톱처럼 렌더링되는 것 방지
-          try {
-            if (!document.querySelector('meta[name="viewport"]')) {
-              var mv = document.createElement('meta');
-              mv.name = 'viewport';
-              mv.content = 'width=device-width, initial-scale=1, maximum-scale=5';
-              document.head.appendChild(mv);
+          function hdReady(fn) {
+            if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', fn);
+            } else {
+              fn();
             }
-          } catch (e) {}
+          }
+
+          // 모바일 뷰포트 강제 — viewport meta가 없으면 데스크톱처럼 렌더링되는 것 방지
+          hdReady(function() {
+            try {
+              if (!document.querySelector('meta[name="viewport"]')) {
+                var mv = document.createElement('meta');
+                mv.name = 'viewport';
+                mv.content = 'width=device-width, initial-scale=1, maximum-scale=5';
+                document.head.appendChild(mv);
+              }
+            } catch (e) {}
+          });
 
           // 텍스트 선택 감지 → 네이티브 AI 바 표시
           document.addEventListener('selectionchange', function() {
@@ -343,18 +364,20 @@ object WebViewManager {
           };
 
           // 스크롤 스파이 → 현재 섹션을 네이티브로 전달
-          try {
-            var observer = new IntersectionObserver(function(entries) {
-              entries.forEach(function(entry) {
-                if (entry.isIntersecting) {
-                  try { AndroidBridge.onSectionVisible(entry.target.id || ''); } catch (e) {}
-                }
+          hdReady(function() {
+            try {
+              var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                  if (entry.isIntersecting) {
+                    try { AndroidBridge.onSectionVisible(entry.target.id || ''); } catch (e) {}
+                  }
+                });
+              }, { threshold: 0.3 });
+              document.querySelectorAll('section[id], section.board, [id]').forEach(function(el) {
+                if (el.id && el.tagName === 'SECTION') observer.observe(el);
               });
-            }, { threshold: 0.3 });
-            document.querySelectorAll('section[id], section.board, [id]').forEach(function(el) {
-              if (el.id && el.tagName === 'SECTION') observer.observe(el);
-            });
-          } catch (e) {}
+            } catch (e) {}
+          });
         })();
     """.trimIndent()
 }

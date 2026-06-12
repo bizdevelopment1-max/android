@@ -312,6 +312,12 @@ class MainActivity : ComponentActivity() {
         WebViewManager.setOfflineMode(wv, vm.isOffline.value)
         dashWebView = wv
         wv.loadUrl(WebViewManager.DASHBOARD_URL)
+        // 워치독: 8초가 지나도 로드가 거의 진행되지 않았으면 자동 재시도
+        wv.postDelayed({
+            if (!isDestroyed && !isFinishing && (wv.url.isNullOrBlank() || wv.progress < 30)) {
+                reloadDashboard()
+            }
+        }, 8000)
         return wv
     }
 
