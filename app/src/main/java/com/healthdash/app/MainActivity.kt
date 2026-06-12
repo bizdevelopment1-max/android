@@ -301,19 +301,17 @@ class MainActivity : ComponentActivity() {
             }
         }
         dashWebView = wv
+        // 오염된 캐시가 흰 화면을 만들 수 있어 시작 시 항상 깨끗한 상태로 최신 콘텐츠 로드
+        WebViewManager.clearWebStorage(wv)
         wv.loadUrl(WebViewManager.DASHBOARD_URL)
         return wv
     }
 
-    /** 대시보드 새로고침 — URL이 비어 있으면(최초 로드 실패) 처음부터 다시 로드 */
+    /** 대시보드 새로고침 — 캐시를 완전히 비우고 처음부터 다시 로드 */
     private fun reloadDashboard() {
         val wv = dashWebView ?: return
-        val url = wv.url
-        if (url.isNullOrBlank() || url == "about:blank") {
-            wv.loadUrl(WebViewManager.DASHBOARD_URL)
-        } else {
-            wv.reload()
-        }
+        WebViewManager.clearWebStorage(wv)
+        wv.loadUrl(WebViewManager.DASHBOARD_URL)
     }
 
     /** 하단 바 AI 로고 탭 — 선택 텍스트가 있으면 함께 전달, 없으면 앱만 실행 */

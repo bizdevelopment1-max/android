@@ -56,7 +56,7 @@ object WebViewManager {
             builtInZoomControls = false
             textZoom = appSettings.textZoom
             userAgentString = "$userAgentString HealthDashApp/1.0"
-            cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+            cacheMode = WebSettings.LOAD_DEFAULT
         }
         wv.addJavascriptInterface(
             DashBridge(onTextSelected, onSectionVisible, onKeywordFound),
@@ -122,6 +122,19 @@ object WebViewManager {
             })();
         """.trimIndent()
         wv.evaluateJavascript(js, null)
+    }
+
+    /**
+     * 오염된 캐시/서비스워커 저장소로 인한 흰 화면을 방지하기 위해
+     * WebView 캐시와 웹 저장소를 완전히 비운다.
+     */
+    fun clearWebStorage(wv: WebView) {
+        try {
+            wv.clearCache(true)
+            wv.clearHistory()
+            android.webkit.WebStorage.getInstance().deleteAllData()
+        } catch (_: Exception) {
+        }
     }
 
     /** 화면 높이의 fraction 배만큼 부드럽게 스크롤 (윈도우/내부 컨테이너 자동 감지) */
