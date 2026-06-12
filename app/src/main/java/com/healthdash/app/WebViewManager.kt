@@ -12,8 +12,6 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.browser.customtabs.CustomTabsIntent
-import androidx.webkit.WebViewCompat
-import androidx.webkit.WebViewFeature
 import org.json.JSONObject
 
 /** 웹 → 네이티브 콜백용 JavaScript Bridge (`window.AndroidBridge`) */
@@ -53,15 +51,12 @@ object WebViewManager {
         wv.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
-            // 기기 폭 기준 레이아웃 = 모바일 버전 렌더링 강제
-            // (useWideViewPort=true는 viewport meta 없는 페이지를 데스크톱 폭으로 그림)
-            loadWithOverviewMode = false
-            useWideViewPort = false
+            loadWithOverviewMode = true
+            useWideViewPort = true
             builtInZoomControls = false
             textZoom = appSettings.textZoom
             userAgentString = "$userAgentString HealthDashApp/1.0"
-            // 온라인 시 항상 최신 콘텐츠, 오프라인 전환 시 MainActivity가 캐시 모드로 변경
-            cacheMode = WebSettings.LOAD_DEFAULT
+            cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
         }
         wv.addJavascriptInterface(
             DashBridge(onTextSelected, onSectionVisible, onKeywordFound),
@@ -91,13 +86,6 @@ object WebViewManager {
             ) {
                 if (request?.isForMainFrame == true) onMainFrameError()
             }
-        }
-        // 가능하면 문서 시작 시점에 초기화 스크립트 주입 (선택 감지/내비를 더 일찍 활성화)
-        try {
-            if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
-                WebViewCompat.addDocumentStartJavaScript(wv, INIT_SCRIPT, setOf("*"))
-            }
-        } catch (_: Exception) {
         }
         return wv
     }
@@ -134,12 +122,6 @@ object WebViewManager {
             })();
         """.trimIndent()
         wv.evaluateJavascript(js, null)
-    }
-
-    /** 온라인/오프라인에 따라 캐시 모드 전환 */
-    fun setOfflineMode(wv: WebView, offline: Boolean) {
-        wv.settings.cacheMode =
-            if (offline) WebSettings.LOAD_CACHE_ELSE_NETWORK else WebSettings.LOAD_DEFAULT
     }
 
     /** 화면 높이의 fraction 배만큼 부드럽게 스크롤 (윈도우/내부 컨테이너 자동 감지) */
@@ -244,18 +226,6 @@ object WebViewManager {
               fn();
             }
           }
-
-          // 모바일 뷰포트 강제 — viewport meta가 없으면 데스크톱처럼 렌더링되는 것 방지
-          hdReady(function() {
-            try {
-              if (!document.querySelector('meta[name="viewport"]')) {
-                var mv = document.createElement('meta');
-                mv.name = 'viewport';
-                mv.content = 'width=device-width, initial-scale=1, maximum-scale=5';
-                document.head.appendChild(mv);
-              }
-            } catch (e) {}
-          });
 
           // 텍스트 선택 감지 → 네이티브 AI 바 표시
           document.addEventListener('selectionchange', function() {

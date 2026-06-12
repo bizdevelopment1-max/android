@@ -56,8 +56,6 @@ class MainActivity : ComponentActivity() {
     private var dashWebView: WebView? = null
     private var ttsManager: TtsManager? = null
     private var lastSearchQuery: String = ""
-    private var loadRetryCount = 0
-    private var blankRetryCount = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -276,28 +274,19 @@ class MainActivity : ComponentActivity() {
             },
             onProgress = { progress -> vm.setLoading(progress in 1..99) },
             onPageFinished = { web ->
-                loadRetryCount = 0
                 WebViewManager.injectInitScript(web)
                 WebViewManager.injectTheme(web, isDarkMode())
                 WebViewManager.injectHighContrast(web, vm.highContrast.value)
                 WebViewManager.injectKeywordCheck(web, vm.keywords.value)
                 vm.highlights.value.forEach { WebViewManager.injectHighlight(web, it.text) }
-                web.postDelayed({ checkBlankAndRecover(web) }, 3000)
             },
             onMainFrameError = {
                 runOnUiThread {
-                    if (loadRetryCount < 2) {
-                        loadRetryCount++
-                        dashWebView?.postDelayed({
-                            if (!vm.isOffline.value) reloadDashboard()
-                        }, 2500)
-                    } else {
-                        Toast.makeText(
-                            this,
-                            "페이지 로드 실패 — 우측 새로고침 버튼을 눌러주세요",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
+                    Toast.makeText(
+                        this,
+                        "페이지 로드 오류 — 우측 새로고침(↻) 버튼을 눌러주세요",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         )
@@ -311,56 +300,9 @@ class MainActivity : ComponentActivity() {
                 Toast.makeText(this, "검색 결과 없음", Toast.LENGTH_SHORT).show()
             }
         }
-        WebViewManager.setOfflineMode(wv, vm.isOffline.value)
         dashWebView = wv
-
-        // 첫 로드는 WebView가 실제 크기로 배치된 뒤 시작 —
-        // 폭 0 상태에서 로드하면 SPA가 빈 화면(흰 화면)으로 렌더링되는 문제 방지
-        var initialLoadDone = false
-        wv.addOnLayoutChangeListener(object : android.view.View.OnLayoutChangeListener {
-            override fun onLayoutChange(
-                v: android.view.View,
-                left: Int, top: Int, right: Int, bottom: Int,
-                oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int
-            ) {
-                if (!initialLoadDone && v.width > 0) {
-                    initialLoadDone = true
-                    v.removeOnLayoutChangeListener(this)
-                    wv.loadUrl(WebViewManager.DASHBOARD_URL)
-                }
-            }
-        })
-        // 안전망: 레이아웃 이벤트가 오지 않으면 1.5초 후 그냥 로드
-        wv.postDelayed({
-            if (!initialLoadDone) {
-                initialLoadDone = true
-                wv.loadUrl(WebViewManager.DASHBOARD_URL)
-            }
-        }, 1500)
-        // 워치독: 10초가 지나도 로드가 거의 진행되지 않았으면 자동 재시도
-        wv.postDelayed({
-            if (!isDestroyed && !isFinishing && (wv.url.isNullOrBlank() || wv.progress < 30)) {
-                reloadDashboard()
-            }
-        }, 10000)
+        wv.loadUrl(WebViewManager.DASHBOARD_URL)
         return wv
-    }
-
-    /** 로드 완료 후에도 본문이 비어 있으면(흰 화면) 자동 재로드 */
-    private fun checkBlankAndRecover(web: WebView) {
-        web.evaluateJavascript(
-            "(function(){try{return document.body&&document.body.innerText?document.body.innerText.trim().length:0}catch(e){return 0}})()"
-        ) { value ->
-            val len = value?.replace("\"", "")?.toIntOrNull() ?: 0
-            if (len < 40) {
-                if (blankRetryCount < 2 && !vm.isOffline.value) {
-                    blankRetryCount++
-                    reloadDashboard()
-                }
-            } else {
-                blankRetryCount = 0
-            }
-        }
     }
 
     /** 대시보드 새로고침 — URL이 비어 있으면(최초 로드 실패) 처음부터 다시 로드 */
@@ -479,12 +421,10 @@ class MainActivity : ComponentActivity() {
             cm.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
                     vm.setOffline(false)
-                    runOnUiThread { dashWebView?.let { WebViewManager.setOfflineMode(it, false) } }
                 }
 
                 override fun onLost(network: Network) {
                     vm.setOffline(true)
-                    runOnUiThread { dashWebView?.let { WebViewManager.setOfflineMode(it, true) } }
                 }
             })
         } catch (_: Exception) {
