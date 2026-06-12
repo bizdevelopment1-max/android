@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.KeyEvent
+import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -38,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.healthdash.app.ui.AiSelectionBar
 import com.healthdash.app.ui.BookmarkSheet
 import com.healthdash.app.ui.BottomNavBar
@@ -260,8 +262,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** 대시보드 WebView 생성 (당겨서 새로고침 없음 — 새로고침은 설정 시트에서) */
-    private fun createDashboardView(ctx: android.content.Context): WebView {
+    /** 대시보드 WebView 생성 — 어제 정상 동작하던 구조(SwipeRefreshLayout 컨테이너) 그대로 */
+    private fun createDashboardView(ctx: android.content.Context): SwipeRefreshLayout {
+        val swipe = SwipeRefreshLayout(ctx)
         val wv = WebViewManager.createDashboardWebView(
             context = this,
             appSettings = appSettings,
@@ -274,6 +277,7 @@ class MainActivity : ComponentActivity() {
             },
             onProgress = { progress -> vm.setLoading(progress in 1..99) },
             onPageFinished = { web ->
+                swipe.isRefreshing = false
                 WebViewManager.injectInitScript(web)
                 WebViewManager.injectTheme(web, isDarkMode())
                 WebViewManager.injectHighContrast(web, vm.highContrast.value)
@@ -301,10 +305,13 @@ class MainActivity : ComponentActivity() {
             }
         }
         dashWebView = wv
-        // 오염된 캐시가 흰 화면을 만들 수 있어 시작 시 항상 깨끗한 상태로 최신 콘텐츠 로드
-        WebViewManager.clearWebStorage(wv)
+        swipe.addView(
+            wv,
+            ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        )
+        swipe.setOnRefreshListener { wv.reload() }
         wv.loadUrl(WebViewManager.DASHBOARD_URL)
-        return wv
+        return swipe
     }
 
     /** 대시보드 새로고침 — 캐시를 완전히 비우고 처음부터 다시 로드 */

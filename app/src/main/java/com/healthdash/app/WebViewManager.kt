@@ -56,7 +56,7 @@ object WebViewManager {
             builtInZoomControls = false
             textZoom = appSettings.textZoom
             userAgentString = "$userAgentString HealthDashApp/1.0"
-            cacheMode = WebSettings.LOAD_DEFAULT
+            cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
         }
         wv.addJavascriptInterface(
             DashBridge(onTextSelected, onSectionVisible, onKeywordFound),
