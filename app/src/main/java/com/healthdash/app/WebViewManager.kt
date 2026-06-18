@@ -18,7 +18,8 @@ import org.json.JSONObject
 class DashBridge(
     private val textSelected: (String) -> Unit,
     private val sectionVisible: (String) -> Unit,
-    private val keywordFound: (String) -> Unit
+    private val keywordFound: (String) -> Unit,
+    private val navExtracted: (String) -> Unit
 ) {
     @JavascriptInterface
     fun onTextSelected(text: String) = textSelected(text)
@@ -28,6 +29,10 @@ class DashBridge(
 
     @JavascriptInterface
     fun onKeywordFound(keywords: String) = keywordFound(keywords)
+
+    /** 사이트 왼쪽 내비에서 추출한 라벨 목록(JSON 배열) */
+    @JavascriptInterface
+    fun onNavExtracted(json: String) = navExtracted(json)
 }
 
 /** WebView 초기화, JS 주입, 핀치 줌 등 WebView 관련 로직 */
@@ -43,6 +48,7 @@ object WebViewManager {
         onTextSelected: (String) -> Unit,
         onSectionVisible: (String) -> Unit,
         onKeywordFound: (String) -> Unit,
+        onNavExtracted: (String) -> Unit,
         onProgress: (Int) -> Unit,
         onPageFinished: (WebView) -> Unit,
         onMainFrameError: () -> Unit
@@ -59,7 +65,7 @@ object WebViewManager {
             cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
         }
         wv.addJavascriptInterface(
-            DashBridge(onTextSelected, onSectionVisible, onKeywordFound),
+            DashBridge(onTextSelected, onSectionVisible, onKeywordFound, onNavExtracted),
             "AndroidBridge"
         )
         wv.webChromeClient = object : WebChromeClient() {
@@ -114,6 +120,14 @@ object WebViewManager {
     fun navigateToSection(wv: WebView, sectionId: String, label: String) {
         val idQ = JSONObject.quote(sectionId)
         val labelQ = JSONObject.quote(label)
+        // 동적 탭(idx:N)은 추출해 둔 사이트 내비 항목을 직접 클릭
+        if (sectionId.startsWith("idx:")) {
+            val n = sectionId.removePrefix("idx:").toIntOrNull() ?: -1
+            val js = "if (window.HD_NAV_CLICK) { window.HD_NAV_CLICK($n); }" +
+                " else if (window.HD_NAV) { window.HD_NAV('', $labelQ); }"
+            wv.evaluateJavascript(js, null)
+            return
+        }
         val js = """
             (function() {
               if (window.HD_NAV) { window.HD_NAV($idQ, $labelQ); return; }
@@ -293,6 +307,62 @@ object WebViewManager {
           window.DASH_SEARCH = window.DASH_SEARCH || function(query) {
             window.dispatchEvent(new CustomEvent('nativeSearch', { detail: { query: query } }));
           };
+
+          // 사이트 왼쪽 내비게이션을 추출해 하단 탭과 일치시키기
+          window.HD_EXTRACT_NAV = function() {
+            function txt(el) { return (el.textContent || '').replace(/\s+/g, ' ').trim(); }
+            var sel = 'nav, aside, [role="navigation"], [role="tablist"], [role="menu"],' +
+              ' [class*="sidebar"], [class*="side-nav"], [class*="sidenav"], [class*="side_bar"],' +
+              ' [class*="menu"], [class*="nav"], [class*="tabs"], [id*="sidebar"], [id*="nav"]';
+            var containers = Array.prototype.slice.call(document.querySelectorAll(sel));
+            var best = null, bestScore = -1;
+            containers.forEach(function(c) {
+              var raw = Array.prototype.slice.call(
+                c.querySelectorAll('a, button, li, [role="tab"], [role="menuitem"], [role="button"]'));
+              var seen = {}, list = [];
+              raw.forEach(function(it) {
+                var t = txt(it);
+                if (!t || t.length > 28) return;
+                if (it.querySelector('a, button, [role="tab"], [role="menuitem"]')) return;
+                if (seen[t]) return;
+                seen[t] = 1;
+                list.push(it);
+              });
+              if (list.length < 3 || list.length > 24) return;
+              var r = c.getBoundingClientRect();
+              var score = list.length;
+              if (r.left < window.innerWidth * 0.45) score += 6;   // 왼쪽 배치 가산
+              if (r.height >= r.width) score += 3;                  // 세로 배치 가산
+              if (score > bestScore) { bestScore = score; best = list; }
+            });
+            if (!best) return null;
+            window.__HD_NAV__ = best;
+            return best.map(txt);
+          };
+
+          window.HD_NAV_CLICK = function(i) {
+            try {
+              var el = window.__HD_NAV__ && window.__HD_NAV__[i];
+              if (el) {
+                el.click();
+                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                return true;
+              }
+            } catch (e) {}
+            return false;
+          };
+
+          function hdReportNav() {
+            try {
+              var labels = window.HD_EXTRACT_NAV();
+              if (labels && labels.length >= 3 && window.AndroidBridge && AndroidBridge.onNavExtracted) {
+                AndroidBridge.onNavExtracted(JSON.stringify(labels));
+              }
+            } catch (e) {}
+          }
+          hdReady(function() { hdReportNav(); });
+          setTimeout(hdReportNav, 1200);
+          setTimeout(hdReportNav, 2800);
 
           // 플로팅 버튼 스크롤 — 윈도우 또는 가장 큰 내부 스크롤 컨테이너를 자동 감지
           window.HD_SCROLL = function(frac) {

@@ -85,11 +85,34 @@ val NAV_TABS = listOf(
     NavTab("reports", "리포트", Icons.Filled.Description, Color(0xFF7E22CE))
 )
 
-/** 바 상단 컬러 스트립 (AI 브랜드 그라데이션) */
+/** 바 상단 컬러 스트립 (블루 브랜드 그라데이션) */
 private val ACCENT_STRIP = listOf(
-    Color(0xFF7C3AED), Color(0xFF4F46E5), Color(0xFF0891B2),
-    Color(0xFF22D3EE), Color(0xFFC026D3), Color(0xFFEC4899), Color(0xFF7C3AED)
+    Color(0xFF1E40AF), Color(0xFF2563EB), Color(0xFF0891B2),
+    Color(0xFF22D3EE), Color(0xFF3B82F6), Color(0xFF1D4ED8), Color(0xFF1E40AF)
 )
+
+// 동적 탭(사이트 내비에서 추출)에 순환 배정할 아이콘 / 색상
+private val DYNAMIC_ICONS = listOf(
+    Icons.Filled.GridView, Icons.Filled.SmartToy, Icons.Filled.Speed, Icons.Filled.PieChart,
+    Icons.Filled.Payments, Icons.Filled.Business, Icons.Filled.AutoAwesome,
+    Icons.AutoMirrored.Filled.Article, Icons.Filled.Gavel, Icons.Filled.Lightbulb,
+    Icons.Filled.Insights, Icons.Filled.Description
+)
+private val DYNAMIC_ACCENTS = listOf(
+    Color(0xFF2563EB), Color(0xFF4F46E5), Color(0xFF0891B2), Color(0xFF0D9488),
+    Color(0xFF059669), Color(0xFFD97706), Color(0xFFEA580C), Color(0xFFDB2777),
+    Color(0xFFDC2626), Color(0xFF1D4ED8), Color(0xFFC026D3), Color(0xFF7E22CE)
+)
+
+/** 사이트 왼쪽 내비에서 추출한 라벨로 하단 탭을 만든다 (id = "idx:N"). */
+fun buildNavTabs(labels: List<String>): List<NavTab> = labels.mapIndexed { i, label ->
+    NavTab(
+        id = "idx:$i",
+        label = label,
+        icon = DYNAMIC_ICONS[i % DYNAMIC_ICONS.size],
+        accent = DYNAMIC_ACCENTS[i % DYNAMIC_ACCENTS.size]
+    )
+}
 
 /**
  * 반투명 플로팅 하단 바 — 콘텐츠 위에 떠 있어 뒤가 비쳐 보인다.
@@ -100,6 +123,7 @@ private val ACCENT_STRIP = listOf(
 fun BottomNavBar(
     activeSection: String,
     barScale: Float,
+    tabs: List<NavTab>,
     onTabClick: (NavTab) -> Unit,
     onMoveSection: (Int) -> Unit,
     onAiClick: (AiApp) -> Unit,
@@ -109,11 +133,11 @@ fun BottomNavBar(
 ) {
     val s = barScale.coerceIn(0.7f, 1.4f)
     val scrollState = rememberScrollState()
-    val activeIndex = NAV_TABS.indexOfFirst { it.id == activeSection }
+    val activeIndex = tabs.indexOfFirst { it.id == activeSection }
 
-    LaunchedEffect(activeIndex) {
-        if (activeIndex >= 0 && scrollState.maxValue > 0 && NAV_TABS.size > 1) {
-            val target = scrollState.maxValue * activeIndex / (NAV_TABS.size - 1)
+    LaunchedEffect(activeIndex, tabs.size) {
+        if (activeIndex >= 0 && scrollState.maxValue > 0 && tabs.size > 1) {
+            val target = scrollState.maxValue * activeIndex / (tabs.size - 1)
             scrollState.animateScrollTo(target)
         }
     }
@@ -171,7 +195,7 @@ fun BottomNavBar(
                     .horizontalScroll(scrollState),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                NAV_TABS.forEach { tab ->
+                tabs.forEach { tab ->
                     BarItem(
                         label = tab.label,
                         accent = tab.accent,
@@ -216,7 +240,7 @@ fun BottomNavBar(
                 }
                 Spacer(Modifier.width(4.dp))
             }
-            IconButton(onClick = { onMoveSection(1) }, enabled = activeIndex < NAV_TABS.size - 1) {
+            IconButton(onClick = { onMoveSection(1) }, enabled = activeIndex < tabs.size - 1) {
                 Icon(Icons.Filled.ChevronRight, contentDescription = "다음 탭")
             }
             IconButton(onClick = onCollapse) {
@@ -238,7 +262,7 @@ fun CollapsedBarHandle(onExpand: () -> Unit) {
             .padding(bottom = 4.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(
-                Brush.horizontalGradient(listOf(Color(0xFF7C3AED), Color(0xFFC026D3)))
+                Brush.horizontalGradient(listOf(Color(0xFF1E40AF), Color(0xFF2563EB)))
             )
             .clickable { onExpand() }
             .navigationBarsPadding()

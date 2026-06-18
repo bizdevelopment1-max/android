@@ -72,14 +72,21 @@ class MainActivity : ComponentActivity() {
         ttsManager = TtsManager(this)
         registerNetworkCallback()
         setContent {
-            HealthDashTheme {
+            val themeMode by vm.themeMode.collectAsState()
+            val systemDark = isSystemInDarkTheme()
+            val dark = when (themeMode) {
+                1 -> false
+                2 -> true
+                else -> systemDark
+            }
+            HealthDashTheme(darkTheme = dark) {
                 var showSplash by remember { mutableStateOf(true) }
                 LaunchedEffect(Unit) {
                     delay(1700)
                     showSplash = false
                 }
                 Box(Modifier.fillMaxSize()) {
-                    MainScreen()
+                    MainScreen(dark)
                     AnimatedVisibility(
                         visible = showSplash,
                         exit = fadeOut(animationSpec = tween(450))
@@ -93,10 +100,12 @@ class MainActivity : ComponentActivity() {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    private fun MainScreen() {
+    private fun MainScreen(dark: Boolean) {
         val textZoom by vm.textZoom.collectAsState()
         val selectedText by vm.selectedText.collectAsState()
         val activeSection by vm.activeSection.collectAsState()
+        val navTabs by vm.navTabs.collectAsState()
+        val themeMode by vm.themeMode.collectAsState()
         val isLoading by vm.isLoading.collectAsState()
         val isOffline by vm.isOffline.collectAsState()
         val bookmarks by vm.bookmarks.collectAsState()
@@ -110,7 +119,6 @@ class MainActivity : ComponentActivity() {
         val keywords by vm.keywords.collectAsState()
         val barVisible by vm.barVisible.collectAsState()
         val barScale by vm.barScale.collectAsState()
-        val dark = isSystemInDarkTheme()
         val snackbarHostState = remember { SnackbarHostState() }
 
         LaunchedEffect(textZoom) {
@@ -180,6 +188,7 @@ class MainActivity : ComponentActivity() {
                             BottomNavBar(
                                 activeSection = activeSection,
                                 barScale = barScale,
+                                tabs = navTabs,
                                 onTabClick = { tab ->
                                     vm.setActiveSection(tab.id)
                                     dashWebView?.let { WebViewManager.navigateToSection(it, tab.id, tab.label) }
@@ -247,6 +256,11 @@ class MainActivity : ComponentActivity() {
                 onTtsSpeed = { vm.setTtsSpeed(it) },
                 barScale = barScale,
                 onBarScale = { vm.setBarScale(it) },
+                themeMode = themeMode,
+                onThemeMode = { mode ->
+                    vm.setThemeMode(mode)
+                    dashWebView?.let { WebViewManager.injectTheme(it, isDarkMode()) }
+                },
                 keywords = keywords,
                 onKeywords = { vm.setKeywords(it) },
                 onOpenSearch = {
@@ -289,12 +303,13 @@ class MainActivity : ComponentActivity() {
             context = this,
             appSettings = appSettings,
             onTextSelected = { text -> vm.setSelectedText(text) },
-            onSectionVisible = { id -> vm.setActiveSection(id) },
+            onSectionVisible = { id -> vm.onScrollSpySection(id) },
             onKeywordFound = { keywords ->
                 runOnUiThread {
                     Toast.makeText(this, "관심 키워드 발견: $keywords", Toast.LENGTH_LONG).show()
                 }
             },
+            onNavExtracted = { json -> runOnUiThread { applyExtractedNav(json) } },
             onProgress = { progress -> vm.setLoading(progress in 1..99) },
             onPageFinished = { web ->
                 swipe.isRefreshing = false
@@ -436,8 +451,24 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun isDarkMode(): Boolean =
-        (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+    /** 사이트 내비에서 추출한 라벨(JSON 배열)을 하단 탭에 반영 */
+    private fun applyExtractedNav(json: String) {
+        try {
+            val arr = org.json.JSONArray(json)
+            val labels = ArrayList<String>(arr.length())
+            for (i in 0 until arr.length()) labels.add(arr.optString(i))
+            vm.setNavLabels(labels)
+        } catch (_: Exception) {
+        }
+    }
+
+    /** 테마 설정(시스템/라이트/다크)을 반영한 다크 여부 — WebView 테마 주입용 */
+    private fun isDarkMode(): Boolean = when (vm.themeMode.value) {
+        1 -> false
+        2 -> true
+        else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
+    }
 
     private fun registerNetworkCallback() {
         try {

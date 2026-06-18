@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ai_violet">#6D28D9</color>
-    <color name="ai_indigo">#1A1048</color>
-    <color name="ic_launcher_bg">#6D28D9</color>
+    <color name="ai_blue">#1E40AF</color>
+    <color name="ai_deep">#0A1A6E</color>
+    <color name="ic_launcher_bg">#1E40AF</color>
 </resources>

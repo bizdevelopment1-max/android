@@ -2,7 +2,7 @@
 <resources>
     <style name="Theme.MXAI" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@drawable/window_bg_ai</item>
-        <item name="android:statusBarColor">@color/ai_violet</item>
+        <item name="android:statusBarColor">@color/ai_blue</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 </resources>

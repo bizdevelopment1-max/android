@@ -32,7 +32,7 @@ import androidx.compose.material3.Text
 import com.healthdash.app.R
 
 /**
- * 콜드 스타트 브랜드 스플래시 — 보라/시안/마젠타 그라데이션 위에
+ * 콜드 스타트 브랜드 스플래시 — 블루 그라데이션 위에
  * MX AI Insights 로고가 은은하게 호흡(스케일/알파)하며 표시된다.
  */
 @Composable
@@ -62,7 +62,7 @@ fun SplashScreen() {
             .fillMaxSize()
             .background(
                 Brush.linearGradient(
-                    colors = listOf(Color(0xFF7C46F6), Color(0xFF4B1FA8), Color(0xFF1A1048)),
+                    colors = listOf(Color(0xFF3B82F6), Color(0xFF1E40AF), Color(0xFF0A1A6E)),
                     start = Offset(0f, 0f),
                     end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
                 )
