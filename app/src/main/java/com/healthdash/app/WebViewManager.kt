@@ -33,7 +33,7 @@ class DashBridge(
 /** WebView 초기화, JS 주입, 핀치 줌 등 WebView 관련 로직 */
 object WebViewManager {
 
-    const val DASHBOARD_URL = "https://bizdevelopment1-max.github.io/health/"
+    const val DASHBOARD_URL = "https://bizdevelopment1-max.github.io/ai/"
     private const val INTERNAL_HOST = "bizdevelopment1-max.github.io"
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -55,7 +55,7 @@ object WebViewManager {
             useWideViewPort = true
             builtInZoomControls = false
             textZoom = appSettings.textZoom
-            userAgentString = "$userAgentString HealthDashApp/1.0"
+            userAgentString = "$userAgentString MXAIInsights/1.0"
             cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
         }
         wv.addJavascriptInterface(

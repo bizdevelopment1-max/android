@@ -9,24 +9,28 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
-val LgBlue = Color(0xFF1428A0)
+// MX AI Insights 브랜드 컬러
+val AiViolet = Color(0xFF6D28D9)
+val AiCyan = Color(0xFF22D3EE)
+val AiMagenta = Color(0xFFEC4899)
+val AiIndigo = Color(0xFF1A1048)
 
 private val LightColors = lightColorScheme(
-    primary = LgBlue,
+    primary = AiViolet,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFDDE1FF),
-    onPrimaryContainer = Color(0xFF000F5C),
-    secondary = Color(0xFF3A4FC4),
-    tertiary = Color(0xFF00897B)
+    primaryContainer = Color(0xFFEDE4FF),
+    onPrimaryContainer = Color(0xFF22074E),
+    secondary = Color(0xFF0E7490),
+    tertiary = AiMagenta
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFB9C3FF),
-    onPrimary = Color(0xFF09218A),
-    primaryContainer = Color(0xFF2C41B0),
-    onPrimaryContainer = Color(0xFFDDE1FF),
-    secondary = Color(0xFFA5B4FF),
-    tertiary = Color(0xFF4DB6AC)
+    primary = Color(0xFFCBB6FF),
+    onPrimary = Color(0xFF2C0E6B),
+    primaryContainer = Color(0xFF4B1FA8),
+    onPrimaryContainer = Color(0xFFEDE4FF),
+    secondary = Color(0xFF67E8F9),
+    tertiary = Color(0xFFF9A8D4)
 )
 
 @Composable
@@ -35,7 +39,7 @@ fun HealthDashTheme(content: @Composable () -> Unit) {
     val colors = if (dark) DarkColors else LightColors
     val systemUi = rememberSystemUiController()
     SideEffect {
-        systemUi.setStatusBarColor(if (dark) Color(0xFF0A1460) else LgBlue, darkIcons = false)
+        systemUi.setStatusBarColor(if (dark) AiIndigo else AiViolet, darkIcons = false)
     }
     MaterialTheme(colorScheme = colors, content = content)
 }

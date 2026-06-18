@@ -18,6 +18,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,7 +36,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -49,6 +54,8 @@ import com.healthdash.app.ui.HealthDashTheme
 import com.healthdash.app.ui.HistorySheet
 import com.healthdash.app.ui.SearchOverlay
 import com.healthdash.app.ui.SettingsSheet
+import com.healthdash.app.ui.SplashScreen
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -66,7 +73,20 @@ class MainActivity : ComponentActivity() {
         registerNetworkCallback()
         setContent {
             HealthDashTheme {
-                MainScreen()
+                var showSplash by remember { mutableStateOf(true) }
+                LaunchedEffect(Unit) {
+                    delay(1700)
+                    showSplash = false
+                }
+                Box(Modifier.fillMaxSize()) {
+                    MainScreen()
+                    AnimatedVisibility(
+                        visible = showSplash,
+                        exit = fadeOut(animationSpec = tween(450))
+                    ) {
+                        SplashScreen()
+                    }
+                }
             }
         }
     }

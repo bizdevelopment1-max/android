@@ -1,53 +1,51 @@
-# BD Health — 헬스케어 대시보드 리더 앱
+# MX AI Insights — AI 인사이트 대시보드 리더 앱
 
-[https://bizdevelopment1-max.github.io/health/](https://bizdevelopment1-max.github.io/health/) 대시보드를
-모바일에서 읽기 좋게 보여주는 Android 앱입니다. 단순 WebView 래퍼가 아니라,
-**선택한 텍스트를 ChatGPT / Gemini / Claude / Perplexity로 바로 보내 질문할 수 있는 읽기 보조 + AI 리서치 도구**입니다.
+[https://bizdevelopment1-max.github.io/ai/](https://bizdevelopment1-max.github.io/ai/) 대시보드를
+모바일에서 읽기 좋게 보여주는 Android 앱입니다. 선택한 텍스트를
+**ChatGPT / Gemini / Claude / Perplexity로 바로 보내** 질문·요약·분석할 수 있는 읽기 보조 + AI 리서치 도구입니다.
+
+> 같은 저장소의 `claude/upbeat-curie-2qfoqd` 브랜치에는 헬스케어용 **BD Health** 앱이 있습니다.
+> 이 앱(MX AI Insights)은 `claude/mx-ai-insights` 브랜치에서 빌드되며 **별도 패키지·별도 다운로드 링크**를 가집니다.
 
 ## APK 다운로드
 
-GitHub Actions가 푸시마다 APK를 자동 빌드합니다.
+GitHub Actions가 이 브랜치 푸시마다 APK를 자동 빌드합니다.
 
-- **최신 APK**: [Releases → apk-latest](../../releases/tag/apk-latest) 에서 `BDHealth-debug.apk` 다운로드
-- 또는 [Actions](../../actions) 탭 → 최신 `Build APK` 실행 → Artifacts → `BDHealth-debug-apk`
+- **최신 APK**: [Releases → apk-ai-latest](../../releases/tag/apk-ai-latest) 에서 `MXAI-Insights-debug.apk` 다운로드
+- 또는 [Actions](../../actions) 탭 → 최신 `Build APK` 실행 → Artifacts → `MXAI-Insights-debug-apk`
 
 설치 시 "출처를 알 수 없는 앱 설치 허용"이 필요할 수 있습니다 (디버그 서명 APK).
 
 ## 주요 기능
 
+### 브랜드 / 시작 화면
+- 전용 **3D 런처 아이콘**(MX / AI / INSIGHTS, 보라·시안·마젠타 그라데이션)
+- 콜드 스타트 시 그라데이션 **스플래시 화면**(로고가 호흡하는 애니메이션) → 본 화면 페이드 전환
+- 첫 프레임 흰 화면 방지를 위한 그라데이션 윈도우 배경
+
 ### 읽기 / 가독성
-- **플로팅 버튼 6개** (드래그로 위아래 위치 이동, 잠시 후 반투명): 글자 +/−, 스크롤 ▲/▼, 페이지 업/다운
-- 핀치 줌 제스처, 글꼴 프리셋(70/85/100/120/150) — 재시작 후에도 유지
-- **센서 자동 회전**(fullSensor), **고대비 모드**(흰 배경 + 검정 글자 강제 CSS), **다크모드 싱크**(`nativeTheme` 커스텀 이벤트 전달)
-- 시작 시 항상 **최신 콘텐츠 로드**(LOAD_DEFAULT), 오프라인 시에만 캐시 표시 + 스낵바 안내
-- 새로고침·공유·스크린샷은 설정(⚙) 시트에서 (당겨서 새로고침은 오동작 방지를 위해 제거)
+- **플로팅 버튼 7개**(드래그로 위치 이동, 잠시 후 반투명): 글자 +/−, 스크롤 ▲/▼, 페이지 업/다운, 새로고침
+- 핀치 줌, 글꼴 프리셋(70/85/100/120/150) — 재시작 후 유지
+- 센서 자동 회전, 고대비 모드, 다크모드 싱크
 
-### 텍스트 선택 → AI 4종 (네이티브 앱 분할 실행)
-1. 본문에서 텍스트를 길게 눌러 선택하면 하단에 AI 선택 바가 슬라이드업
-2. ChatGPT / Gemini / Claude / Perplexity 버튼 **탭** → **로그인되어 있는 네이티브 AI 앱**을
-   분할 화면(`FLAG_ACTIVITY_LAUNCH_ADJACENT`)으로 실행하고 텍스트를 전달
-   - 전달 순서: ①`ACTION_SEND` 공유 인텐트(텍스트가 앱에 바로 들어감) → ②앱 딥링크(`?q=…`) → ③앱 실행 + 클립보드 붙여넣기
-   - 앱 미설치 시 웹 URL을 외부 브라우저로 오픈
-3. 버튼을 **길게 누르면** 공유 시트가 떠서 원하는 앱을 직접 선택 가능
-4. 어떤 경로든 텍스트는 항상 클립보드에 복사되므로 길게 눌러 붙여넣기 가능
+### 내비게이션 (프로페셔널 하단 바)
+- AI 인사이트 섹션 12개 탭(오버뷰·AI 모델·벤치마크·시장 규모·투자·기업 동향·신제품·연구·규제·활용 사례·인사이트·리포트)
+- 탭별 고유 색상 + 선택 시 **상단 액센트 막대 + 그라데이션 필 배경 + 스프링 바운스** 애니메이션
+- AI 4사 로고 버튼 + 설정까지 **모두 함께 슬라이드**, ◀ ▶ 화살표만 양끝 고정
+- 우측 ˅로 접기 / "MX AI Insights" 핸들로 펼치기, 상단 핸들 드래그로 크기 조절
+- 섹션 이동 4단계 폴백(사이트 DASH_NAV → id → 내비 라벨 매칭 클릭 → 제목 매칭 스크롤)으로
+  사이트 자체 내비게이션과 자동 연동
 
-> 참고: Android는 일반 앱이 분할 화면을 강제로 켤 수 없습니다.
-> `LAUNCH_ADJACENT`는 이미 분할 화면 상태이거나 기기가 지원할 때 옆/위 창으로 열리며,
-> 아닐 경우 일반 실행됩니다 (이때 최근 앱(□) 버튼 → "화면 분할"을 선택하면 됩니다).
-> AI 전송 히스토리는 설정(⚙) → "AI 전송 히스토리 보기"에서 확인할 수 있습니다.
-
-### 내비게이션 (반투명 플로팅 하단 바)
-- 콘텐츠 위에 떠 있는 반투명 그라데이션 바 (상단에 액센트 컬러 스트립)
-- 12개 섹션 탭 + AI 4사 로고 버튼 + 설정이 **모두 함께 슬라이드**, ◀ ▶ 화살표만 양끝 고정(한 칸씩 이동)
-- 우측 ˅ 버튼으로 **바를 접을 수 있고**, 접힌 상태에선 "BD Health" 핸들로 다시 펼침
-- **바 상단 핸들을 위아래로 드래그해 크기 조절** (설정 슬라이더 70~140%도 제공, 저장됨)
-- 탭별 고유 색상(아이콘 상시 컬러) + 선택 시 필(pill) 배경·스프링 바운스·색상 전환 애니메이션
-- 섹션 이동은 4단계 폴백: 사이트 DASH_NAV → 섹션 id 스크롤 → 사이트 내비 라벨 매칭 클릭(SPA 대응) → 제목 텍스트 매칭 스크롤
-- 북마크·검색·AI 히스토리는 설정(⚙) 시트에서 진입 (검색은 볼륨 업 키로도 열림)
+### 텍스트 선택 → AI 4종 (그라데이션 카드)
+- 본문 텍스트를 선택하면 하단에 AI 선택 바가 슬라이드업
+- 각 버튼은 **회사별 그라데이션 배경 + 프로스티드 화이트 로고 칩**으로 표시
+- **탭**: 로그인된 네이티브 AI 앱을 분할 화면으로 실행 + 텍스트 전달
+  (ACTION_SEND → 딥링크 → 앱 실행+클립보드 순 폴백, 미설치 시 웹)
+- **길게 누르기**: 공유 시트로 원하는 앱 직접 선택
+- 같은 바에서 TTS 읽기 / 번역 / 하이라이트 저장
 
 ### 부가 기능
-- 하이라이트 저장(노란 형광펜, 재시작 시 복원), TTS 읽어주기(0.5x~2.0x), 한↔영 번역,
-  관심 키워드 알림, 스크린샷 갤러리 저장, 페이지/선택 텍스트 공유
+- 북마크(Room), 검색 오버레이(볼륨 업 키), 키워드 알림, 스크린샷 저장, 공유, AI 전송 히스토리
 
 ## 빌드 방법
 
@@ -56,19 +54,12 @@ GitHub Actions가 푸시마다 APK를 자동 빌드합니다.
 # 출력: app/build/outputs/apk/debug/app-debug.apk
 ```
 
-- 패키지: `com.healthdash.app` / minSdk 26 / targetSdk 35
-- Kotlin + Jetpack Compose(Material 3, LG Blue `#1428A0`), Room, androidx.webkit
+- 패키지: `com.mxai.insights` / minSdk 26 / targetSdk 35
+- Kotlin + Jetpack Compose(Material 3, 바이올렛 AI 테마), Room, androidx.webkit
 
-## 구조
+## 참고
 
-```
-app/src/main/java/com/healthdash/app/
-  MainActivity.kt        — 메인 화면, AI 앱 실행/공유/스크린샷
-  MainViewModel.kt       — StateFlow 상태 (줌/선택 텍스트/북마크 등)
-  WebViewManager.kt      — WebView 초기화, JS Bridge, 주입 스크립트, 핀치 줌
-  AiBarManager.kt        — AiApp enum, 클립보드/네이티브 앱 분할 실행/번역/TTS
-  BookmarkRepository.kt  — Room CRUD
-  SettingsManager.kt     — SharedPreferences 래퍼
-  ui/                    — Compose UI (탭 바, FAB, AI 바, 핸들, 검색, 시트)
-  data/                  — Room DB / Entity
-```
+- 탭 라벨은 AI 인사이트 대시보드 구성을 가정해 만들었습니다. 사이트의 실제 섹션 이름과
+  다르면, 하단 바 탭은 사이트 내비게이션의 같은 라벨을 찾아 클릭하는 폴백으로 동작합니다.
+- AI 앱 자동 입력은 Android 정책상 항상 보장되지 않으므로, 선택 텍스트는 항상 클립보드에
+  복사되어 수동 붙여넣기가 가능합니다.
