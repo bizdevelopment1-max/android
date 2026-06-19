@@ -405,7 +405,8 @@ private fun ModelsPanel(th: MxTheme, grad: Brush) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
-                                Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(if (on) grad else Color(0x0FFFFFFF)),
+                                Modifier.size(30.dp).clip(RoundedCornerShape(9.dp))
+                                    .background(if (on) grad else androidx.compose.ui.graphics.SolidColor(Color(0x0FFFFFFF))),
                                 contentAlignment = Alignment.Center
                             ) { VendorGlyphRaw(v.k, if (on) Color.White else Color(0xFFE7E5F4), 17.dp) }
                             Spacer(Modifier.width(9.dp))
