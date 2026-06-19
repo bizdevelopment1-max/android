@@ -11,7 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.KeyEvent
-import android.view.ViewGroup
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -42,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.healthdash.app.ui.AiSelectionBar
 import com.healthdash.app.ui.BookmarkSheet
 import com.healthdash.app.ui.BottomNavBar
@@ -62,6 +61,7 @@ class MainActivity : ComponentActivity() {
     private var dashWebView: WebView? = null
     private var ttsManager: TtsManager? = null
     private var lastSearchQuery: String = ""
+    private var forceRefreshPending = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -294,9 +294,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** 대시보드 WebView 생성 — 어제 정상 동작하던 구조(SwipeRefreshLayout 컨테이너) 그대로 */
-    private fun createDashboardView(ctx: android.content.Context): SwipeRefreshLayout {
-        val swipe = SwipeRefreshLayout(ctx)
+    /** 대시보드 WebView 생성 — 당겨서 새로고침 없이 네이티브 스크롤만 (스크롤 다운 시 리프레시 방지) */
+    private fun createDashboardView(ctx: android.content.Context): WebView {
         val wv = WebViewManager.createDashboardWebView(
             context = this,
             appSettings = appSettings,
@@ -310,7 +309,10 @@ class MainActivity : ComponentActivity() {
             onNavExtracted = { json -> runOnUiThread { applyExtractedNav(json) } },
             onProgress = { progress -> vm.setLoading(progress in 1..99) },
             onPageFinished = { web ->
-                swipe.isRefreshing = false
+                if (forceRefreshPending) {
+                    forceRefreshPending = false
+                    web.settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+                }
                 WebViewManager.injectInitScript(web)
                 WebViewManager.injectTheme(web, isDarkMode())
                 WebViewManager.injectHighContrast(web, vm.highContrast.value)
@@ -338,20 +340,19 @@ class MainActivity : ComponentActivity() {
             }
         }
         dashWebView = wv
-        swipe.addView(
-            wv,
-            ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        )
-        swipe.setOnRefreshListener { wv.reload() }
         wv.loadUrl(WebViewManager.DASHBOARD_URL)
-        return swipe
+        return wv
     }
 
-    /** 대시보드 새로고침 — 캐시를 완전히 비우고 처음부터 다시 로드 */
+    /** 강력 새로고침 (Ctrl+Shift+R 처럼) — 캐시·웹 저장소를 비우고 네트워크에서 강제 재로드 */
     private fun reloadDashboard() {
         val wv = dashWebView ?: return
+        wv.clearCache(true)
         WebViewManager.clearWebStorage(wv)
+        wv.settings.cacheMode = WebSettings.LOAD_NO_CACHE
+        forceRefreshPending = true
         wv.loadUrl(WebViewManager.DASHBOARD_URL)
+        Toast.makeText(this, "강력 새로고침 중…", Toast.LENGTH_SHORT).show()
     }
 
     /** 하단 바 AI 로고 탭 — 선택 텍스트가 있으면 함께 전달, 없으면 앱만 실행 */
