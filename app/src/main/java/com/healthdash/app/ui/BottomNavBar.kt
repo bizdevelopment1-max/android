@@ -370,6 +370,15 @@ private fun BarItem(
     } else {
         Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
     }
+    // 선택 시 글자 팝(스프링 스케일)
+    val labelScale by animateFloatAsState(
+        targetValue = if (active) 1.08f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "labelScale"
+    )
     val badgeGrad = Brush.linearGradient(listOf(lighten(accent, 0.18f), accent, lighten(accent, -0.0f)))
     val container = (32 * scale).dp
 
@@ -384,45 +393,50 @@ private fun BarItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(container)
-                .graphicsLayer { if (active) translationY = bob.dp.toPx() },
-            contentAlignment = Alignment.Center
+        // 아이콘 + 글자가 선택 시 함께 부드럽게 떠오른다(bob)
+        Column(
+            modifier = Modifier.graphicsLayer { if (active) translationY = bob.dp.toPx() },
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 소프트 글로우 (블러 API 없이 radial 그라데이션으로 구현)
-            if (badgeScale > 0.01f) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .graphicsLayer {
-                            scaleX = 1.5f * badgeScale; scaleY = 1.5f * badgeScale; alpha = 0.45f * badgeScale
-                        }
-                        .background(
-                            Brush.radialGradient(listOf(accent.copy(alpha = 0.6f), Color.Transparent)),
-                            CircleShape
-                        )
-                )
+            Box(
+                modifier = Modifier.size(container),
+                contentAlignment = Alignment.Center
+            ) {
+                // 소프트 글로우 (블러 API 없이 radial 그라데이션으로 구현)
+                if (badgeScale > 0.01f) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .graphicsLayer {
+                                scaleX = 1.5f * badgeScale; scaleY = 1.5f * badgeScale; alpha = 0.45f * badgeScale
+                            }
+                            .background(
+                                Brush.radialGradient(listOf(accent.copy(alpha = 0.6f), Color.Transparent)),
+                                CircleShape
+                            )
+                    )
+                }
+                // 그라데이션 원형 배지 (선택 시 스케일인)
+                if (badgeScale > 0.01f) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .graphicsLayer { scaleX = badgeScale; scaleY = badgeScale }
+                            .clip(CircleShape)
+                            .background(badgeGrad)
+                    )
+                }
+                icon(iconTint, (20 * scale).dp)
             }
-            // 그라데이션 원형 배지 (선택 시 스케일인)
-            if (badgeScale > 0.01f) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .graphicsLayer { scaleX = badgeScale; scaleY = badgeScale }
-                        .clip(CircleShape)
-                        .background(badgeGrad)
-                )
-            }
-            icon(iconTint, (20 * scale).dp)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                label,
+                color = labelColor,
+                fontSize = (10 * scale).sp,
+                fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                maxLines = 1,
+                modifier = Modifier.graphicsLayer { scaleX = labelScale; scaleY = labelScale }
+            )
         }
-        Spacer(Modifier.height(2.dp))
-        Text(
-            label,
-            color = labelColor,
-            fontSize = (10 * scale).sp,
-            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-            maxLines = 1
-        )
     }
 }

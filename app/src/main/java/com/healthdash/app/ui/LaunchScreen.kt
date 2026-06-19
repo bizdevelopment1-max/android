@@ -142,6 +142,9 @@ fun LaunchScreen(
         }
     }
 
+    val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
     Box(
         Modifier
             .fillMaxSize()
@@ -153,29 +156,62 @@ fun LaunchScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            TopBar(th, grad, themeIndex, onSelectTheme)
-            CatChips(th, grad, cat) { cat = it }
-            Column(
-                Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Hero(th, grad, cat, sig)
-                Box(Modifier.padding(horizontal = 18.dp, vertical = 8.dp)) {
-                    Panel(th, grad, cat)
+            TopBar(th, grad, themeIndex, onSelectTheme, dense = landscape)
+            CatChips(th, grad, cat, dense = landscape) { cat = it }
+            if (landscape) {
+                // 가로 모드: 좌(히어로) / 우(패널 + Start) 2단 — 내용이 한눈에 보이도록
+                Row(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Column(
+                        Modifier
+                            .weight(0.42f)
+                            .fillMaxHeight()
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Hero(th, grad, cat, sig, dense = true)
+                        VendorStrip()
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    Column(
+                        Modifier
+                            .weight(0.58f)
+                            .fillMaxHeight()
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Box(Modifier.padding(top = 4.dp, bottom = 8.dp)) { Panel(th, grad, cat) }
+                        StartButton(grad, onStart)
+                        Spacer(Modifier.height(6.dp))
+                        Footer()
+                        Spacer(Modifier.height(8.dp))
+                    }
                 }
-                VendorStrip()
-                Spacer(Modifier.height(8.dp))
-            }
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .background(Color(0x8C08060F))
-                    .padding(horizontal = 18.dp, vertical = 14.dp)
-            ) {
-                StartButton(grad, onStart)
-                Spacer(Modifier.height(11.dp))
-                Footer()
+            } else {
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Hero(th, grad, cat, sig)
+                    Box(Modifier.padding(horizontal = 18.dp, vertical = 8.dp)) {
+                        Panel(th, grad, cat)
+                    }
+                    VendorStrip()
+                    Spacer(Modifier.height(8.dp))
+                }
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(Color(0x8C08060F))
+                        .padding(horizontal = 18.dp, vertical = 14.dp)
+                ) {
+                    StartButton(grad, onStart)
+                    Spacer(Modifier.height(11.dp))
+                    Footer()
+                }
             }
         }
     }
@@ -225,11 +261,11 @@ private fun TwinkleField(th: MxTheme) {
 }
 
 @Composable
-private fun TopBar(th: MxTheme, grad: Brush, themeIndex: Int, onSelectTheme: (Int) -> Unit) {
+private fun TopBar(th: MxTheme, grad: Brush, themeIndex: Int, onSelectTheme: (Int) -> Unit, dense: Boolean = false) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = if (dense) 6.dp else 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -267,11 +303,11 @@ private fun TopBar(th: MxTheme, grad: Brush, themeIndex: Int, onSelectTheme: (In
 }
 
 @Composable
-private fun CatChips(th: MxTheme, grad: Brush, cat: String, onCat: (String) -> Unit) {
+private fun CatChips(th: MxTheme, grad: Brush, cat: String, dense: Boolean = false, onCat: (String) -> Unit) {
     Row(
         Modifier
             .horizontalScroll(rememberScrollState())
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+            .padding(start = 16.dp, end = 16.dp, top = if (dense) 6.dp else 12.dp, bottom = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(7.dp)
     ) {
         MX_CATS.forEach { c ->
@@ -290,21 +326,23 @@ private fun CatChips(th: MxTheme, grad: Brush, cat: String, onCat: (String) -> U
 }
 
 @Composable
-private fun Hero(th: MxTheme, grad: Brush, cat: String, sig: Int) {
+private fun Hero(th: MxTheme, grad: Brush, cat: String, sig: Int, dense: Boolean = false) {
     val c = MX_CATS.first { it.id == cat }
     val tr = rememberInfiniteTransition(label = "dot")
     val p by tr.animateFloat(0.3f, 1f, infiniteRepeatable(tween(1600), RepeatMode.Reverse), label = "p")
-    Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 4.dp)) {
+    val titleSize = if (dense) 19.sp else 24.sp
+    val titleLine = if (dense) 22.sp else 27.sp
+    Column(Modifier.padding(start = 18.dp, end = 18.dp, top = if (dense) 6.dp else 12.dp, bottom = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(7.dp).background(th.glow.copy(alpha = p), CircleShape))
             Spacer(Modifier.width(8.dp))
             Text(c.eyebrow, color = MUTED, fontFamily = Mono, fontSize = 10.sp, letterSpacing = 2.sp)
         }
-        Spacer(Modifier.height(8.dp))
-        Text(c.title, color = TXT, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 27.sp, letterSpacing = (-0.7).sp)
-        Spacer(Modifier.height(7.dp))
+        Spacer(Modifier.height(if (dense) 5.dp else 8.dp))
+        Text(c.title, color = TXT, fontWeight = FontWeight.Bold, fontSize = titleSize, lineHeight = titleLine, letterSpacing = (-0.7).sp)
+        Spacer(Modifier.height(if (dense) 5.dp else 7.dp))
         Text(c.sub, color = SUB, fontSize = 12.5.sp, lineHeight = 18.sp)
-        Spacer(Modifier.height(9.dp))
+        Spacer(Modifier.height(if (dense) 6.dp else 9.dp))
         Row {
             Text(formatThousands(sig), fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 10.sp, color = th.g2, letterSpacing = 1.sp)
             Text(" INSIGHTS GENERATED", color = MUTED, fontFamily = Mono, fontSize = 10.sp, letterSpacing = 1.sp)
