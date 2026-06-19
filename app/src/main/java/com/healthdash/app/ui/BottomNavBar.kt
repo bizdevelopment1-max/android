@@ -104,14 +104,24 @@ private val DYNAMIC_ACCENTS = listOf(
     Color(0xFFDC2626), Color(0xFF1D4ED8), Color(0xFFC026D3), Color(0xFF7E22CE)
 )
 
-/** 사이트 왼쪽 내비에서 추출한 라벨로 하단 탭을 만든다 (id = "idx:N"). */
+/** 사이트 왼쪽 내비에서 추출한 라벨로 하단 탭을 만든다 (id = "idx:N", 클릭은 인덱스 기반). */
 fun buildNavTabs(labels: List<String>): List<NavTab> = labels.mapIndexed { i, label ->
     NavTab(
         id = "idx:$i",
-        label = label,
+        label = prettifyNavLabel(label),
         icon = DYNAMIC_ICONS[i % DYNAMIC_ICONS.size],
         accent = DYNAMIC_ACCENTS[i % DYNAMIC_ACCENTS.size]
     )
+}
+
+/** 일부 긴 라벨을 보기 좋은 짧은 표시명으로 치환 (표시만, 클릭 대상은 그대로) */
+private fun prettifyNavLabel(label: String): String {
+    val n = label.trim().replace(" ", "").lowercase()
+    return when {
+        n.startsWith("executivesummary") || n == "summary" -> "Summary"
+        n.contains("데일리기사2") -> "News"
+        else -> label.trim()
+    }
 }
 
 /**

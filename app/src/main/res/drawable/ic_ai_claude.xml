@@ -1,48 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Claude 스타일 선버스트 마크 (브랜드 오렌지) -->
+<!-- Anthropic(Claude) 선버스트 마크 — 브랜드 테라코타 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <group android:rotation="0" android:pivotX="12" android:pivotY="12">
-        <path
-            android:fillColor="#D97757"
-            android:pathData="M12,2.4 A0.9,0.9 0 0 1 12.9,3.3 L12.9,7.5 A0.9,0.9 0 0 1 12,8.4 A0.9,0.9 0 0 1 11.1,7.5 L11.1,3.3 A0.9,0.9 0 0 1 12,2.4 Z" />
+    <group android:pivotX="12" android:pivotY="12" android:rotation="0">
+        <path android:fillColor="#D97757"
+            android:pathData="M11.1,3.2 h1.8 l-0.55,5.6 a0.35,0.35 0 0 1 -0.7,0 Z" />
     </group>
-    <group android:rotation="45" android:pivotX="12" android:pivotY="12">
-        <path
-            android:fillColor="#D97757"
-            android:pathData="M12,2.4 A0.9,0.9 0 0 1 12.9,3.3 L12.9,7.5 A0.9,0.9 0 0 1 12,8.4 A0.9,0.9 0 0 1 11.1,7.5 L11.1,3.3 A0.9,0.9 0 0 1 12,2.4 Z" />
+    <group android:pivotX="12" android:pivotY="12" android:rotation="36">
+        <path android:fillColor="#D97757"
+            android:pathData="M11.1,3.2 h1.8 l-0.55,5.6 a0.35,0.35 0 0 1 -0.7,0 Z" />
     </group>
-    <group android:rotation="90" android:pivotX="12" android:pivotY="12">
-        <path
-            android:fillColor="#D97757"
-            android:pathData="M12,2.4 A0.9,0.9 0 0 1 12.9,3.3 L12.9,7.5 A0.9,0.9 0 0 1 12,8.4 A0.9,0.9 0 0 1 11.1,7.5 L11.1,3.3 A0.9,0.9 0 0 1 12,2.4 Z" />
+    <group android:pivotX="12" android:pivotY="12" android:rotation="72">
+        <path android:fillColor="#D97757"
+            android:pathData="M11.1,3.2 h1.8 l-0.55,5.6 a0.35,0.35 0 0 1 -0.7,0 Z" />
     </group>
-    <group android:rotation="135" android:pivotX="12" android:pivotY="12">
-        <path
-            android:fillColor="#D97757"
-            android:pathData="M12,2.4 A0.9,0.9 0 0 1 12.9,3.3 L12.9,7.5 A0.9,0.9 0 0 1 12,8.4 A0.9,0.9 0 0 1 11.1,7.5 L11.1,3.3 A0.9,0.9 0 0 1 12,2.4 Z" />
+    <group android:pivotX="12" android:pivotY="12" android:rotation="108">
+        <path android:fillColor="#D97757"
+            android:pathData="M11.1,3.2 h1.8 l-0.55,5.6 a0.35,0.35 0 0 1 -0.7,0 Z" />
     </group>
-    <group android:rotation="180" android:pivotX="12" android:pivotY="12">
-        <path
-            android:fillColor="#D97757"
-            android:pathData="M12,2.4 A0.9,0.9 0 0 1 12.9,3.3 L12.9,7.5 A0.9,0.9 0 0 1 12,8.4 A0.9,0.9 0 0 1 11.1,7.5 L11.1,3.3 A0.9,0.9 0 0 1 12,2.4 Z" />
+    <group android:pivotX="12" android:pivotY="12" android:rotation="144">
+        <path android:fillColor="#D97757"
+            android:pathData="M11.1,3.2 h1.8 l-0.55,5.6 a0.35,0.35 0 0 1 -0.7,0 Z" />
     </group>
-    <group android:rotation="225" android:pivotX="12" android:pivotY="12">
-        <path
-            android:fillColor="#D97757"
-            android:pathData="M12,2.4 A0.9,0.9 0 0 1 12.9,3.3 L12.9,7.5 A0.9,0.9 0 0 1 12,8.4 A0.9,0.9 0 0 1 11.1,7.5 L11.1,3.3 A0.9,0.9 0 0 1 12,2.4 Z" />
+    <group android:pivotX="12" android:pivotY="12" android:rotation="180">
+        <path android:fillColor="#D97757"
+            android:pathData="M11.1,3.2 h1.8 l-0.55,5.6 a0.35,0.35 0 0 1 -0.7,0 Z" />
     </group>
-    <group android:rotation="270" android:pivotX="12" android:pivotY="12">
-        <path
-            android:fillColor="#D97757"
-            android:pathData="M12,2.4 A0.9,0.9 0 0 1 12.9,3.3 L12.9,7.5 A0.9,0.9 0 0 1 12,8.4 A0.9,0.9 0 0 1 11.1,7.5 L11.1,3.3 A0.9,0.9 0 0 1 12,2.4 Z" />
+    <group android:pivotX="12" android:pivotY="12" android:rotation="216">
+        <path android:fillColor="#D97757"
+            android:pathData="M11.1,3.2 h1.8 l-0.55,5.6 a0.35,0.35 0 0 1 -0.7,0 Z" />
     </group>
-    <group android:rotation="315" android:pivotX="12" android:pivotY="12">
-        <path
-            android:fillColor="#D97757"
-            android:pathData="M12,2.4 A0.9,0.9 0 0 1 12.9,3.3 L12.9,7.5 A0.9,0.9 0 0 1 12,8.4 A0.9,0.9 0 0 1 11.1,7.5 L11.1,3.3 A0.9,0.9 0 0 1 12,2.4 Z" />
+    <group android:pivotX="12" android:pivotY="12" android:rotation="252">
+        <path android:fillColor="#D97757"
+            android:pathData="M11.1,3.2 h1.8 l-0.55,5.6 a0.35,0.35 0 0 1 -0.7,0 Z" />
+    </group>
+    <group android:pivotX="12" android:pivotY="12" android:rotation="288">
+        <path android:fillColor="#D97757"
+            android:pathData="M11.1,3.2 h1.8 l-0.55,5.6 a0.35,0.35 0 0 1 -0.7,0 Z" />
+    </group>
+    <group android:pivotX="12" android:pivotY="12" android:rotation="324">
+        <path android:fillColor="#D97757"
+            android:pathData="M11.1,3.2 h1.8 l-0.55,5.6 a0.35,0.35 0 0 1 -0.7,0 Z" />
     </group>
 </vector>
