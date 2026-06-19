@@ -294,8 +294,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** 대시보드 WebView 생성 — 당겨서 새로고침 없이 네이티브 스크롤만 (스크롤 다운 시 리프레시 방지) */
-    private fun createDashboardView(ctx: android.content.Context): WebView {
+    /**
+     * 대시보드 WebView 생성 — 당겨서 새로고침 없이 네이티브 스크롤만.
+     * WebView를 명시적 MATCH_PARENT 크기의 FrameLayout에 담아 측정 누락으로 인한 흰 화면을 방지.
+     */
+    private fun createDashboardView(ctx: android.content.Context): android.widget.FrameLayout {
+        val frame = android.widget.FrameLayout(ctx)
         val wv = WebViewManager.createDashboardWebView(
             context = this,
             appSettings = appSettings,
@@ -340,8 +344,12 @@ class MainActivity : ComponentActivity() {
             }
         }
         dashWebView = wv
+        val mp = android.view.ViewGroup.LayoutParams.MATCH_PARENT
+        wv.layoutParams = android.widget.FrameLayout.LayoutParams(mp, mp)
+        frame.addView(wv)
+        frame.layoutParams = android.view.ViewGroup.LayoutParams(mp, mp)
         wv.loadUrl(WebViewManager.DASHBOARD_URL)
-        return wv
+        return frame
     }
 
     /** 강력 새로고침 (Ctrl+Shift+R 처럼) — 캐시·웹 저장소를 비우고 네트워크에서 강제 재로드 */
