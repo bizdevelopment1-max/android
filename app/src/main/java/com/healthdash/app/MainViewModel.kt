@@ -77,6 +77,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _themeMode = MutableStateFlow(settings.themeMode)
     val themeMode: StateFlow<Int> = _themeMode.asStateFlow()
 
+    // 런치 페이지 컬러 테마(0~5, 저장) + 런치 페이지 표시 여부(콜드 스타트마다 표시)
+    private val _launchTheme = MutableStateFlow(settings.launchTheme)
+    val launchTheme: StateFlow<Int> = _launchTheme.asStateFlow()
+
+    private val _showLaunch = MutableStateFlow(true)
+    val showLaunch: StateFlow<Boolean> = _showLaunch.asStateFlow()
+
     private val _aiHistory = MutableStateFlow<List<AiHistoryItem>>(emptyList())
     val aiHistory: StateFlow<List<AiHistoryItem>> = _aiHistory.asStateFlow()
 
@@ -160,6 +167,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val m = mode.coerceIn(0, 2)
         _themeMode.value = m
         settings.themeMode = m
+    }
+
+    fun setLaunchTheme(index: Int) {
+        val i = index.coerceIn(0, 5)
+        _launchTheme.value = i
+        settings.launchTheme = i
+    }
+
+    fun dismissLaunch() {
+        _showLaunch.value = false
     }
 
     /** 사이트에서 추출한 내비 라벨로 하단 탭을 교체. 기존과 같으면 무시. */

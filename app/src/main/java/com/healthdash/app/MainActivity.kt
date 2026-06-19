@@ -36,9 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -52,10 +50,9 @@ import com.healthdash.app.ui.CollapsedBarHandle
 import com.healthdash.app.ui.FabGroup
 import com.healthdash.app.ui.HealthDashTheme
 import com.healthdash.app.ui.HistorySheet
+import com.healthdash.app.ui.LaunchScreen
 import com.healthdash.app.ui.SearchOverlay
 import com.healthdash.app.ui.SettingsSheet
-import com.healthdash.app.ui.SplashScreen
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -80,18 +77,19 @@ class MainActivity : ComponentActivity() {
                 else -> systemDark
             }
             HealthDashTheme(darkTheme = dark) {
-                var showSplash by remember { mutableStateOf(true) }
-                LaunchedEffect(Unit) {
-                    delay(1700)
-                    showSplash = false
-                }
+                val showLaunch by vm.showLaunch.collectAsState()
+                val launchTheme by vm.launchTheme.collectAsState()
                 Box(Modifier.fillMaxSize()) {
                     MainScreen(dark)
                     AnimatedVisibility(
-                        visible = showSplash,
-                        exit = fadeOut(animationSpec = tween(450))
+                        visible = showLaunch,
+                        exit = fadeOut(animationSpec = tween(400))
                     ) {
-                        SplashScreen()
+                        LaunchScreen(
+                            themeIndex = launchTheme,
+                            onSelectTheme = { vm.setLaunchTheme(it) },
+                            onStart = { vm.dismissLaunch() }
+                        )
                     }
                 }
             }
