@@ -1,14 +1,15 @@
 package com.healthdash.app.ui
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
@@ -56,9 +58,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
@@ -114,14 +116,25 @@ fun buildNavTabs(labels: List<String>): List<NavTab> = labels.mapIndexed { i, la
     )
 }
 
-/** 일부 긴 라벨을 보기 좋은 짧은 표시명으로 치환 (표시만, 클릭 대상은 그대로) */
+// 사이트 내비의 긴 라벨 → 짧은 표시명 (표시만 바뀌고 클릭 대상은 인덱스 기반 유지)
+private val NAV_LABEL_MAP = linkedMapOf(
+    "executivesummary" to "Summary",
+    "ai네이티브" to "AI Native",
+    "월별매출추이" to "매출 Trend",
+    "핵심인사이트" to "인사이트",
+    "성능신뢰성격차" to "성능 Gap",
+    "경쟁다이내믹스" to "Dynamics",
+    "수익화모델" to "Biz Model",
+    "리서치리포트" to "Report",
+    "주가차트" to "Stock",
+    "데일리기사2" to "News"
+)
+
 private fun prettifyNavLabel(label: String): String {
     val n = label.trim().replace(" ", "").lowercase()
-    return when {
-        n.startsWith("executivesummary") || n == "summary" -> "Summary"
-        n.contains("데일리기사2") -> "News"
-        else -> label.trim()
-    }
+    NAV_LABEL_MAP[n]?.let { return it }
+    for ((k, v) in NAV_LABEL_MAP) if (n.contains(k)) return v
+    return label.trim()
 }
 
 /**
@@ -306,9 +319,16 @@ private fun BarDivider() {
     )
 }
 
+private fun lighten(c: Color, f: Float) = Color(
+    red = c.red + (1f - c.red) * f,
+    green = c.green + (1f - c.green) * f,
+    blue = c.blue + (1f - c.blue) * f,
+    alpha = 1f
+)
+
 /**
- * 하단 바 공통 아이템 — 선택 시 상단 액센트 인디케이터 + 그라데이션 필 배경 +
- * 스프링 바운스 + 색상 전환 애니메이션.
+ * 하단 바 공통 아이템 — 선택 시 아이콘이 그라데이션 원형 배지로 바뀌며
+ * 스프링 스케일인 + 은은한 글로우 + 부드러운 바운스(bob) 애니메이션이 적용된다.
  */
 @Composable
 private fun BarItem(
@@ -321,56 +341,80 @@ private fun BarItem(
     icon: @Composable (Color, androidx.compose.ui.unit.Dp) -> Unit
 ) {
     val neutral = MaterialTheme.colorScheme.onSurfaceVariant
-    val iconColor by animateColorAsState(
-        targetValue = if (active) accent else accent.copy(alpha = 0.78f),
-        label = "icon"
-    )
     val labelColor by animateColorAsState(
         targetValue = if (active || alwaysAccentLabel) accent else neutral,
         label = "label"
     )
-    val iconScale by animateFloatAsState(
-        targetValue = if (active) 1.2f else 1f,
+    val iconTint by animateColorAsState(
+        targetValue = if (active) Color.White else accent.copy(alpha = 0.82f),
+        label = "iconTint"
+    )
+    // 배지 스케일인 (스프링 바운스)
+    val badgeScale by animateFloatAsState(
+        targetValue = if (active) 1f else 0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMediumLow
         ),
-        label = "scale"
+        label = "badge"
+    )
+    // 활성 시 위아래로 부드럽게 떠다니는 bob
+    val bob by rememberInfiniteTransition(label = "bob").animateFloat(
+        initialValue = -1.6f,
+        targetValue = 1.6f,
+        animationSpec = infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "bobV"
     )
     val pillBrush = if (active) {
-        Brush.verticalGradient(listOf(accent.copy(alpha = 0.22f), accent.copy(alpha = 0.10f)))
+        Brush.verticalGradient(listOf(accent.copy(alpha = 0.18f), Color.Transparent))
     } else {
         Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
     }
+    val badgeGrad = Brush.linearGradient(listOf(lighten(accent, 0.18f), accent, lighten(accent, -0.0f)))
+    val container = (32 * scale).dp
 
     Column(
         modifier = Modifier
-            .padding(horizontal = 2.dp, vertical = (4 * scale).dp)
-            .clip(RoundedCornerShape(14.dp))
+            .padding(horizontal = 2.dp, vertical = (3 * scale).dp)
+            .clip(RoundedCornerShape(16.dp))
             .background(pillBrush)
             .clickable { onClick() }
-            .padding(horizontal = (9 * scale).dp, vertical = (5 * scale).dp)
-            .widthIn(min = (44 * scale).dp),
+            .padding(horizontal = (8 * scale).dp, vertical = (5 * scale).dp)
+            .widthIn(min = (46 * scale).dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // 활성 탭 상단 액센트 막대
-        AnimatedVisibility(
-            visible = active,
-            enter = scaleIn() + fadeIn(),
-            exit = scaleOut() + fadeOut()
+        Box(
+            modifier = Modifier
+                .size(container)
+                .graphicsLayer { if (active) translationY = bob.dp.toPx() },
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .padding(bottom = 3.dp)
-                    .width((18 * scale).dp)
-                    .height(3.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(accent)
-            )
-        }
-        Box(Modifier.scale(iconScale)) {
-            icon(iconColor, (22 * scale).dp)
+            // 소프트 글로우 (블러 API 없이 radial 그라데이션으로 구현)
+            if (badgeScale > 0.01f) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .graphicsLayer {
+                            scaleX = 1.5f * badgeScale; scaleY = 1.5f * badgeScale; alpha = 0.45f * badgeScale
+                        }
+                        .background(
+                            Brush.radialGradient(listOf(accent.copy(alpha = 0.6f), Color.Transparent)),
+                            CircleShape
+                        )
+                )
+            }
+            // 그라데이션 원형 배지 (선택 시 스케일인)
+            if (badgeScale > 0.01f) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .graphicsLayer { scaleX = badgeScale; scaleY = badgeScale }
+                        .clip(CircleShape)
+                        .background(badgeGrad)
+                )
+            }
+            icon(iconTint, (20 * scale).dp)
         }
         Spacer(Modifier.height(2.dp))
         Text(
