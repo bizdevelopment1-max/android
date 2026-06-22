@@ -116,26 +116,8 @@ fun buildNavTabs(labels: List<String>): List<NavTab> = labels.mapIndexed { i, la
     )
 }
 
-// 사이트 내비의 긴 라벨 → 짧은 표시명 (표시만 바뀌고 클릭 대상은 인덱스 기반 유지)
-private val NAV_LABEL_MAP = linkedMapOf(
-    "executivesummary" to "Summary",
-    "ai네이티브" to "AI Native",
-    "월별매출추이" to "매출 Trend",
-    "핵심인사이트" to "인사이트",
-    "성능신뢰성격차" to "성능 Gap",
-    "경쟁다이내믹스" to "Dynamics",
-    "수익화모델" to "Biz Model",
-    "리서치리포트" to "Report",
-    "주가차트" to "Stock",
-    "데일리기사2" to "News"
-)
-
-private fun prettifyNavLabel(label: String): String {
-    val n = label.trim().replace(" ", "").lowercase()
-    NAV_LABEL_MAP[n]?.let { return it }
-    for ((k, v) in NAV_LABEL_MAP) if (n.contains(k)) return v
-    return label.trim()
-}
+// 하단 탭은 사이트 왼쪽 내비를 동적으로 그대로 반영한다(라벨 매칭으로 연결되므로 원본 유지).
+private fun prettifyNavLabel(label: String): String = label.trim()
 
 /**
  * 반투명 플로팅 하단 바 — 콘텐츠 위에 떠 있어 뒤가 비쳐 보인다.

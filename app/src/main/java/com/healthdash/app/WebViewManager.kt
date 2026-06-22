@@ -120,11 +120,11 @@ object WebViewManager {
     fun navigateToSection(wv: WebView, sectionId: String, label: String) {
         val idQ = JSONObject.quote(sectionId)
         val labelQ = JSONObject.quote(label)
-        // 동적 탭(idx:N)은 추출해 둔 사이트 내비 항목을 직접 클릭
+        // 동적 탭(idx:N)은 클릭 시점에 다시 추출해 라벨로 매칭 클릭 (인덱스 어긋남 방지)
         if (sectionId.startsWith("idx:")) {
             val n = sectionId.removePrefix("idx:").toIntOrNull() ?: -1
-            val js = "if (window.HD_NAV_CLICK) { window.HD_NAV_CLICK($n); }" +
-                " else if (window.HD_NAV) { window.HD_NAV('', $labelQ); }"
+            val js = "if (window.HD_NAV_GO) { window.HD_NAV_GO($n, $labelQ); }" +
+                " else if (window.HD_NAV_CLICK) { window.HD_NAV_CLICK($n); }"
             wv.evaluateJavascript(js, null)
             return
         }
@@ -311,58 +311,111 @@ object WebViewManager {
           // 사이트 왼쪽 내비게이션을 추출해 하단 탭과 일치시키기
           window.HD_EXTRACT_NAV = function() {
             function txt(el) { return (el.textContent || '').replace(/\s+/g, ' ').trim(); }
-            var sel = 'nav, aside, [role="navigation"], [role="tablist"], [role="menu"],' +
-              ' [class*="sidebar"], [class*="side-nav"], [class*="sidenav"], [class*="side_bar"],' +
-              ' [class*="menu"], [class*="nav"], [class*="tabs"], [id*="sidebar"], [id*="nav"]';
+            function visible(el) {
+              var r = el.getBoundingClientRect();
+              if (r.width < 1 || r.height < 1) return false;
+              var st = getComputedStyle(el);
+              return st.display !== 'none' && st.visibility !== 'hidden' && st.opacity !== '0';
+            }
+            var sel = 'nav, aside, [role="navigation"], [role="tablist"], [role="menu"], [role="menubar"],' +
+              ' [class*="sidebar"], [class*="side-nav"], [class*="sidenav"], [class*="side_bar"], [class*="drawer"],' +
+              ' [class*="menu"], [class*="nav"], [class*="tabs"], [class*="tab-list"], [id*="sidebar"], [id*="nav"], ul';
             var containers = Array.prototype.slice.call(document.querySelectorAll(sel));
             var best = null, bestScore = -1;
             containers.forEach(function(c) {
+              if (!visible(c)) return;
               var raw = Array.prototype.slice.call(
-                c.querySelectorAll('a, button, li, [role="tab"], [role="menuitem"], [role="button"]'));
+                c.querySelectorAll('a, button, li, [role="tab"], [role="menuitem"], [role="button"], [class*="item"]'));
               var seen = {}, list = [];
               raw.forEach(function(it) {
+                if (!visible(it)) return;
                 var t = txt(it);
-                if (!t || t.length > 28) return;
+                if (!t || t.length > 30) return;
+                // 자식에 또 다른 클릭 가능한 항목이 있으면(중첩) 건너뜀 → 잎 노드만
                 if (it.querySelector('a, button, [role="tab"], [role="menuitem"]')) return;
                 if (seen[t]) return;
                 seen[t] = 1;
                 list.push(it);
               });
-              if (list.length < 3 || list.length > 24) return;
+              if (list.length < 2 || list.length > 26) return;
               var r = c.getBoundingClientRect();
               var score = list.length;
-              if (r.left < window.innerWidth * 0.45) score += 6;   // 왼쪽 배치 가산
-              if (r.height >= r.width) score += 3;                  // 세로 배치 가산
+              if (r.left < window.innerWidth * 0.5) score += 6;    // 왼쪽 배치 가산
+              if (r.height >= r.width) score += 4;                  // 세로 배치 가산
+              if (r.top < window.innerHeight * 0.5) score += 1;
               if (score > bestScore) { bestScore = score; best = list; }
             });
-            if (!best) return null;
+            if (!best || best.length < 2) return null;
             window.__HD_NAV__ = best;
             return best.map(txt);
           };
 
-          window.HD_NAV_CLICK = function(i) {
+          function hdNorm(s) { return (s || '').replace(/\s+/g, '').toLowerCase(); }
+
+          function hdClickEl(el) {
             try {
-              var el = window.__HD_NAV__ && window.__HD_NAV__[i];
-              if (el) {
-                el.click();
-                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                return true;
+              el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              ['pointerdown', 'mousedown', 'mouseup', 'click'].forEach(function(type) {
+                try { el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window })); } catch (e) {}
+              });
+              if (typeof el.click === 'function') { try { el.click(); } catch (e) {} }
+              // 앵커(#섹션) 직접 스크롤 폴백
+              var a = (el.tagName === 'A') ? el : el.querySelector('a') || el.closest('a');
+              if (a && a.getAttribute('href') && a.getAttribute('href').charAt(0) === '#') {
+                var t = document.getElementById(a.getAttribute('href').slice(1));
+                if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }
+              return true;
+            } catch (e) { return false; }
+          }
+
+          // 클릭 시점에 최신 내비를 다시 추출해 라벨 우선, 인덱스 폴백으로 클릭
+          window.HD_NAV_GO = function(i, label) {
+            try {
+              window.HD_EXTRACT_NAV();
+              var items = window.__HD_NAV__ || [];
+              var el = null;
+              if (label) {
+                var target = hdNorm(label);
+                for (var j = 0; j < items.length; j++) {
+                  if (hdNorm(items[j].textContent) === target) { el = items[j]; break; }
+                }
+                if (!el) for (var k = 0; k < items.length; k++) {
+                  var tt = hdNorm(items[k].textContent);
+                  if (tt && (tt.indexOf(target) >= 0 || target.indexOf(tt) >= 0)) { el = items[k]; break; }
+                }
+              }
+              if (!el && i >= 0 && i < items.length) el = items[i];
+              if (el) return hdClickEl(el);
             } catch (e) {}
             return false;
           };
+          window.HD_NAV_CLICK = function(i) { return window.HD_NAV_GO(i, ''); };
 
+          var hdLastNav = '';
           function hdReportNav() {
             try {
               var labels = window.HD_EXTRACT_NAV();
-              if (labels && labels.length >= 3 && window.AndroidBridge && AndroidBridge.onNavExtracted) {
+              if (labels && labels.length >= 2 && window.AndroidBridge && AndroidBridge.onNavExtracted) {
+                var key = labels.join('|');
+                if (key === hdLastNav) return;     // 변경 없으면 무시
+                hdLastNav = key;
                 AndroidBridge.onNavExtracted(JSON.stringify(labels));
               }
             } catch (e) {}
           }
           hdReady(function() { hdReportNav(); });
-          setTimeout(hdReportNav, 1200);
-          setTimeout(hdReportNav, 2800);
+          setTimeout(hdReportNav, 1000);
+          setTimeout(hdReportNav, 2500);
+          // 왼쪽 내비가 바뀌면(SPA 라우팅 등) 하단 탭도 자동 갱신
+          try {
+            var hdT = null;
+            var hdObs = new MutationObserver(function() {
+              if (hdT) clearTimeout(hdT);
+              hdT = setTimeout(hdReportNav, 350);
+            });
+            hdObs.observe(document.body, { childList: true, subtree: true });
+          } catch (e) {}
 
           // 플로팅 버튼 스크롤 — 윈도우 또는 가장 큰 내부 스크롤 컨테이너를 자동 감지
           window.HD_SCROLL = function(frac) {
