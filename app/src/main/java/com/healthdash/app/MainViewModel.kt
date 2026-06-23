@@ -30,7 +30,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _textZoom = MutableStateFlow(settings.textZoom)
     val textZoom: StateFlow<Int> = _textZoom.asStateFlow()
 
-    private val _activeSection = MutableStateFlow("overview")
+    private val _activeSection = MutableStateFlow(NAV_TABS.first().id)
     val activeSection: StateFlow<String> = _activeSection.asStateFlow()
 
     private val _selectedText = MutableStateFlow("")
@@ -180,15 +180,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** 사이트에서 추출한 내비 라벨로 하단 탭을 교체. 기존과 같으면 무시. */
+    /** 하단 탭은 사이드바에 맞춘 고정 11개를 사용하므로 동적 추출은 무시(덮어쓰지 않음). */
     fun setNavLabels(labels: List<String>) {
-        val clean = labels.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
-        if (clean.size < 3) return
-        val tabs = buildNavTabs(clean)
-        if (tabs.map { it.label } == _navTabs.value.map { it.label }) return
-        _navTabs.value = tabs
-        if (_navTabs.value.none { it.id == _activeSection.value }) {
-            _activeSection.value = tabs.first().id
-        }
+        // no-op
     }
 
     /** AI 앱으로 보낸 텍스트를 히스토리에 기록 */

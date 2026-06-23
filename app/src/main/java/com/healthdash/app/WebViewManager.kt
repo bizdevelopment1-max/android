@@ -120,16 +120,10 @@ object WebViewManager {
     fun navigateToSection(wv: WebView, sectionId: String, label: String) {
         val idQ = JSONObject.quote(sectionId)
         val labelQ = JSONObject.quote(label)
-        // 동적 탭(idx:N)은 클릭 시점에 다시 추출해 라벨로 매칭 클릭 (인덱스 어긋남 방지)
-        if (sectionId.startsWith("idx:")) {
-            val n = sectionId.removePrefix("idx:").toIntOrNull() ?: -1
-            val js = "if (window.HD_NAV_GO) { window.HD_NAV_GO($n, $labelQ); }" +
-                " else if (window.HD_NAV_CLICK) { window.HD_NAV_CLICK($n); }"
-            wv.evaluateJavascript(js, null)
-            return
-        }
+        // 라벨이 일치하는 왼쪽 사이드바 항목을 직접 찾아 클릭(이동)하는 것을 최우선으로
         val js = """
             (function() {
+              if (window.HD_NAV_BY_LABEL && $labelQ) { if (window.HD_NAV_BY_LABEL($labelQ)) return; }
               if (window.HD_NAV) { window.HD_NAV($idQ, $labelQ); return; }
               var el = document.getElementById($idQ);
               if (el) el.scrollIntoView({behavior:'smooth'});
@@ -364,7 +358,8 @@ object WebViewManager {
             return best.map(txt);
           };
 
-          function hdNorm(s) { return (s || '').replace(/\s+/g, '').toLowerCase(); }
+          // 공백·구분자(·,•,-,_,/,(),., 등)를 모두 제거해 라벨 표기 차이에도 매칭되도록
+          function hdNorm(s) { return (s || '').replace(/[\s·•・\-_/().,:|]+/g, '').toLowerCase(); }
 
           function hdClickEl(el) {
             try {
@@ -382,6 +377,42 @@ object WebViewManager {
               return true;
             } catch (e) { return false; }
           }
+
+          // 라벨(텍스트)이 일치하는 사이드바/내비 항목을 문서 전체에서 찾아 클릭 — 고정 탭 연결용
+          window.HD_NAV_BY_LABEL = function(label) {
+            try {
+              var target = hdNorm(label);
+              if (!target) return false;
+              var exact = null, partial = null;
+              // 1차: 시맨틱 클릭 요소
+              var sel = 'a, button, [role="tab"], [role="menuitem"], [role="button"], li,' +
+                ' [class*="item"], [class*="nav"], [class*="menu"], [class*="tab"]';
+              var els = Array.prototype.slice.call(document.querySelectorAll(sel));
+              for (var i = 0; i < els.length; i++) {
+                var el = els[i];
+                if (el.querySelector('a, button, [role="tab"], [role="menuitem"]')) continue; // 잎 노드만
+                var t = hdNorm(el.textContent);
+                if (!t) continue;
+                if (t === target) { exact = el; break; }
+                if (!partial && Math.abs(t.length - target.length) <= 3 &&
+                    (t.indexOf(target) >= 0 || target.indexOf(t) >= 0)) partial = el;
+              }
+              var pick = exact || partial;
+              // 2차: 정확히 같은 텍스트의 작은 요소(div/span) 중 클릭 가능해 보이는 것
+              if (!pick) {
+                var all = document.querySelectorAll('div, span, p');
+                for (var j = 0; j < all.length; j++) {
+                  var e = all[j];
+                  if (e.children.length > 3) continue;
+                  if (hdNorm(e.textContent) !== target) continue;
+                  if (getComputedStyle(e).cursor === 'pointer') { pick = e; break; }
+                  if (!pick) pick = e;
+                }
+              }
+              if (pick) return hdClickEl(pick);
+            } catch (e) {}
+            return false;
+          };
 
           // 클릭 시점에 최신 내비를 다시 추출해 라벨 우선, 인덱스 폴백으로 클릭
           window.HD_NAV_GO = function(i, label) {

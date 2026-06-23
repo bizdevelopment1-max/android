@@ -36,7 +36,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
@@ -49,7 +51,10 @@ import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.Icon
@@ -76,20 +81,19 @@ import com.healthdash.app.AiApp
 
 data class NavTab(val id: String, val label: String, val icon: ImageVector, val accent: Color)
 
-// MX AI Insights 사이트 섹션에 맞춘 탭 (라벨 매칭 폴백으로 사이트 내비와 자동 연동)
+// 사이트 왼쪽 사이드바의 클릭 항목 11개를 그대로 고정 (id=라벨, 클릭 시 라벨 매칭으로 이동)
 val NAV_TABS = listOf(
-    NavTab("overview", "오버뷰", Icons.Filled.GridView, Color(0xFF7C3AED)),
-    NavTab("models", "AI 모델", Icons.Filled.SmartToy, Color(0xFF4F46E5)),
-    NavTab("benchmark", "벤치마크", Icons.Filled.Speed, Color(0xFF0891B2)),
-    NavTab("market", "시장 규모", Icons.Filled.PieChart, Color(0xFF0D9488)),
-    NavTab("funding", "투자·펀딩", Icons.Filled.Payments, Color(0xFF059669)),
-    NavTab("companies", "기업 동향", Icons.Filled.Business, Color(0xFFD97706)),
-    NavTab("products", "신제품", Icons.Filled.AutoAwesome, Color(0xFFEA580C)),
-    NavTab("research", "연구·논문", Icons.AutoMirrored.Filled.Article, Color(0xFFDB2777)),
-    NavTab("policy", "규제·정책", Icons.Filled.Gavel, Color(0xFFDC2626)),
-    NavTab("usecases", "활용 사례", Icons.Filled.Lightbulb, Color(0xFF2563EB)),
-    NavTab("insights", "핵심 인사이트", Icons.Filled.Insights, Color(0xFFC026D3)),
-    NavTab("reports", "리포트", Icons.Filled.Description, Color(0xFF7E22CE))
+    NavTab("Executive Summary", "Executive Summary", Icons.Filled.GridView, Color(0xFF7C3AED)),
+    NavTab("데일리 기사", "데일리 기사", Icons.AutoMirrored.Filled.Article, Color(0xFF4F46E5)),
+    NavTab("AI 네이티브", "AI 네이티브", Icons.Filled.AutoAwesome, Color(0xFF2563EB)),
+    NavTab("빅테크 AI", "빅테크 AI", Icons.Filled.Smartphone, Color(0xFF0891B2)),
+    NavTab("AI 스타트업", "AI 스타트업", Icons.Filled.RocketLaunch, Color(0xFF0D9488)),
+    NavTab("수익화 모델", "수익화 모델", Icons.Filled.Payments, Color(0xFF059669)),
+    NavTab("성능·신뢰성 격차", "성능·신뢰성 격차", Icons.Filled.Speed, Color(0xFFD97706)),
+    NavTab("리서치 리포트", "리서치 리포트", Icons.Filled.Description, Color(0xFFEA580C)),
+    NavTab("정량 분석", "정량 분석", Icons.Filled.BarChart, Color(0xFFDB2777)),
+    NavTab("분기별 매출 추이", "분기별 매출 추이", Icons.AutoMirrored.Filled.TrendingUp, Color(0xFFDC2626)),
+    NavTab("주가 차트", "주가 차트", Icons.Filled.ShowChart, Color(0xFF7E22CE))
 )
 
 /** 바 상단 컬러 스트립 (블루 브랜드 그라데이션) */
