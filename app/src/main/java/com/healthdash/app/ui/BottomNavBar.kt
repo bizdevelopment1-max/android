@@ -133,9 +133,11 @@ private val DYNAMIC_ACCENTS = listOf(
 
 /** 사이트 왼쪽 내비에서 추출한 라벨로 하단 탭을 만든다 (id = "idx:N", 클릭은 인덱스 기반). */
 fun buildNavTabs(labels: List<String>): List<NavTab> = labels.mapIndexed { i, label ->
+    val clean = prettifyNavLabel(label)
     NavTab(
         id = "idx:$i",
-        label = prettifyNavLabel(label),
+        label = clean,
+        navLabel = clean,
         icon = DYNAMIC_ICONS[i % DYNAMIC_ICONS.size],
         accent = DYNAMIC_ACCENTS[i % DYNAMIC_ACCENTS.size]
     )
