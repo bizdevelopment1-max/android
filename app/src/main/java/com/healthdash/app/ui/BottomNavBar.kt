@@ -199,12 +199,12 @@ fun BottomNavBar(
             IconButton(onClick = { onMoveSection(-1) }, enabled = activeIndex > 0) {
                 Icon(Icons.Filled.ChevronLeft, contentDescription = "이전 탭")
             }
-            Box(modifier = Modifier.weight(1f)) {
-              Row(
+            Row(
                 modifier = Modifier
+                    .weight(1f)
                     .horizontalScroll(scrollState),
                 verticalAlignment = Alignment.CenterVertically
-              ) {
+            ) {
                 tabs.forEach { tab ->
                     BarItem(
                         label = tab.label,
@@ -257,17 +257,6 @@ fun BottomNavBar(
                     Icon(Icons.Filled.Settings, contentDescription = "설정", tint = tint, modifier = Modifier.size(iconSize))
                 }
                 Spacer(Modifier.width(4.dp))
-              }
-              // 스크롤 가장자리 페이드 (콘텐츠가 부드럽게 사라지는 프로 느낌)
-              val edge = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
-              Box(
-                  Modifier.align(Alignment.CenterStart).fillMaxHeight().width(16.dp)
-                      .background(Brush.horizontalGradient(listOf(edge, Color.Transparent)))
-              )
-              Box(
-                  Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(16.dp)
-                      .background(Brush.horizontalGradient(listOf(Color.Transparent, edge)))
-              )
             }
             IconButton(onClick = { onMoveSection(1) }, enabled = activeIndex < tabs.size - 1) {
                 Icon(Icons.Filled.ChevronRight, contentDescription = "다음 탭")

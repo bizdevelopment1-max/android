@@ -308,44 +308,58 @@ object WebViewManager {
             window.dispatchEvent(new CustomEvent('nativeSearch', { detail: { query: query } }));
           };
 
-          // 사이트 왼쪽 내비게이션을 추출해 하단 탭과 일치시키기
+          // 사이트 '왼쪽 세로 사이드바'를 추출해 하단 탭과 일치시키기
           window.HD_EXTRACT_NAV = function() {
             function txt(el) { return (el.textContent || '').replace(/\s+/g, ' ').trim(); }
             function visible(el) {
+              if (!el) return false;
               var r = el.getBoundingClientRect();
               if (r.width < 1 || r.height < 1) return false;
               var st = getComputedStyle(el);
               return st.display !== 'none' && st.visibility !== 'hidden' && st.opacity !== '0';
             }
-            var sel = 'nav, aside, [role="navigation"], [role="tablist"], [role="menu"], [role="menubar"],' +
-              ' [class*="sidebar"], [class*="side-nav"], [class*="sidenav"], [class*="side_bar"], [class*="drawer"],' +
-              ' [class*="menu"], [class*="nav"], [class*="tabs"], [class*="tab-list"], [id*="sidebar"], [id*="nav"], ul';
-            var containers = Array.prototype.slice.call(document.querySelectorAll(sel));
-            var best = null, bestScore = -1;
-            containers.forEach(function(c) {
-              if (!visible(c)) return;
+            function leafItems(c) {
               var raw = Array.prototype.slice.call(
-                c.querySelectorAll('a, button, li, [role="tab"], [role="menuitem"], [role="button"], [class*="item"]'));
+                c.querySelectorAll('a, button, li, [role="tab"], [role="menuitem"], [role="button"]'));
               var seen = {}, list = [];
               raw.forEach(function(it) {
                 if (!visible(it)) return;
                 var t = txt(it);
-                if (!t || t.length > 30) return;
-                // 자식에 또 다른 클릭 가능한 항목이 있으면(중첩) 건너뜀 → 잎 노드만
-                if (it.querySelector('a, button, [role="tab"], [role="menuitem"]')) return;
+                if (!t || t.length > 28) return;
+                if (it.querySelector('a, button, [role="tab"], [role="menuitem"]')) return; // 잎 노드만
                 if (seen[t]) return;
-                seen[t] = 1;
-                list.push(it);
+                seen[t] = 1; list.push(it);
               });
-              if (list.length < 2 || list.length > 26) return;
+              return list;
+            }
+            // 1) 이미 찾아둔 컨테이너가 유효하면 그대로 재사용 (대시보드 라이브 갱신에도 탭이 흔들리지 않게)
+            var cached = window.__HD_NAV_C__;
+            if (cached && document.body.contains(cached) && visible(cached)) {
+              var cl = leafItems(cached);
+              if (cl.length >= 3) { window.__HD_NAV__ = cl; return cl.map(txt); }
+            }
+            // 2) 왼쪽·세로·좁고·키 큰 사이드바를 우선 점수화
+            var sel = 'nav, aside, [role="navigation"], [role="tablist"], [role="menu"], [role="menubar"],' +
+              ' [class*="sidebar"], [class*="side-nav"], [class*="sidenav"], [class*="drawer"],' +
+              ' [class*="menu"], [class*="nav"], [id*="sidebar"], [id*="nav"]';
+            var containers = Array.prototype.slice.call(document.querySelectorAll(sel));
+            var best = null, bestC = null, bestScore = -1;
+            var vw = window.innerWidth, vh = window.innerHeight;
+            containers.forEach(function(c) {
+              if (!visible(c)) return;
+              var list = leafItems(c);
+              if (list.length < 3 || list.length > 26) return;
               var r = c.getBoundingClientRect();
               var score = list.length;
-              if (r.left < window.innerWidth * 0.5) score += 6;    // 왼쪽 배치 가산
-              if (r.height >= r.width) score += 4;                  // 세로 배치 가산
-              if (r.top < window.innerHeight * 0.5) score += 1;
-              if (score > bestScore) { bestScore = score; best = list; }
+              if (r.left < vw * 0.35) score += 8;       // 왼쪽
+              else if (r.left < vw * 0.5) score += 3;
+              if (r.height >= r.width) score += 5;       // 세로
+              if (r.width < vw * 0.42) score += 3;       // 좁음
+              if (r.height > vh * 0.3) score += 2;       // 키 큰 사이드바
+              if (score > bestScore) { bestScore = score; best = list; bestC = c; }
             });
-            if (!best || best.length < 2) return null;
+            if (!best || best.length < 3) return null;
+            window.__HD_NAV_C__ = bestC;
             window.__HD_NAV__ = best;
             return best.map(txt);
           };
