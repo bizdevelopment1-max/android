@@ -1,23 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Google Gemini 스파크 (4포인트 스타, 멀티컬러 sweep 그라데이션) -->
+<!-- Google Gemini 스파크 (4포인트 스타, 멀티컬러 sweep: 상=레드 우=블루 하=그린 좌=옐로) -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="48"
-    android:viewportHeight="48">
-    <path android:pathData="M24,3 C24,15.5 28,20 45,24 C28,28 24,32.5 24,45 C24,32.5 20,28 3,24 C20,20 24,15.5 24,3 Z">
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path android:pathData="M50,4 C50,32 58,42 96,50 C58,58 50,68 50,96 C50,68 42,58 4,50 C42,42 50,32 50,4 Z">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:type="sweep"
-                android:centerX="24"
-                android:centerY="24">
-                <item android:offset="0.0" android:color="#FF4285F4" />
-                <item android:offset="0.25" android:color="#FF9168E0" />
-                <item android:offset="0.45" android:color="#FFD9586E" />
-                <item android:offset="0.65" android:color="#FFF6B73C" />
-                <item android:offset="0.85" android:color="#FF34A853" />
-                <item android:offset="1.0" android:color="#FF4285F4" />
+                android:centerX="50"
+                android:centerY="50">
+                <item android:offset="0.0" android:color="#FF2E7DF2" />
+                <item android:offset="0.25" android:color="#FF2DA94E" />
+                <item android:offset="0.5" android:color="#FFF4B400" />
+                <item android:offset="0.75" android:color="#FFEA4335" />
+                <item android:offset="1.0" android:color="#FF2E7DF2" />
             </gradient>
         </aapt:attr>
     </path>
