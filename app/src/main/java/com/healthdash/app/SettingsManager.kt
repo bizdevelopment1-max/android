@@ -29,6 +29,16 @@ class SettingsManager(context: Context) {
         get() = prefs.getFloat(KEY_BAR_SCALE, 1.0f)
         set(value) = prefs.edit().putFloat(KEY_BAR_SCALE, value.coerceIn(0.7f, 1.4f)).apply()
 
+    /** 0 = 시스템, 1 = 라이트, 2 = 다크 */
+    var themeMode: Int
+        get() = prefs.getInt(KEY_THEME_MODE, 0)
+        set(value) = prefs.edit().putInt(KEY_THEME_MODE, value.coerceIn(0, 2)).apply()
+
+    /** 런치 페이지에서 고른 컬러 테마 인덱스 (0~5) — 재시작 시 유지 */
+    var launchTheme: Int
+        get() = prefs.getInt(KEY_LAUNCH_THEME, 0)
+        set(value) = prefs.edit().putInt(KEY_LAUNCH_THEME, value.coerceIn(0, 5)).apply()
+
     companion object {
         const val MIN_ZOOM = 70
         const val MAX_ZOOM = 200
@@ -37,5 +47,7 @@ class SettingsManager(context: Context) {
         private const val KEY_TTS_SPEED = "ttsSpeed"
         private const val KEY_KEYWORDS = "keywords"
         private const val KEY_BAR_SCALE = "barScale"
+        private const val KEY_THEME_MODE = "themeMode"
+        private const val KEY_LAUNCH_THEME = "launchTheme"
     }
 }

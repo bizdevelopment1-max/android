@@ -15,18 +15,19 @@ import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
 
-/** 텍스트 선택 시 보여줄 4개 AI 앱 정의 */
+/** 텍스트 선택 시 보여줄 4개 AI 앱 정의 (color→colorEnd 그라데이션) */
 enum class AiApp(
     val displayName: String,
     val color: Long,
+    val colorEnd: Long,
     val packageName: String,
     val iconRes: Int,
     private val queryUrl: String
 ) {
-    CHATGPT("ChatGPT", 0xFF10A37F, "com.openai.chatgpt", R.drawable.ic_ai_chatgpt, "https://chatgpt.com/?q="),
-    GEMINI("Gemini", 0xFF4285F4, "com.google.android.apps.bard", R.drawable.ic_ai_gemini, "https://gemini.google.com/app?q="),
-    CLAUDE("Claude", 0xFFD97757, "com.anthropic.claude", R.drawable.ic_ai_claude, "https://claude.ai/new?q="),
-    PERPLEXITY("Perplexity", 0xFF20808D, "ai.perplexity.app.android", R.drawable.ic_ai_perplexity, "https://www.perplexity.ai/search?q=");
+    CHATGPT("ChatGPT", 0xFF19C37D, 0xFF0B8A66, "com.openai.chatgpt", R.drawable.ic_ai_chatgpt, "https://chatgpt.com/?q="),
+    GEMINI("Gemini", 0xFF4796E3, 0xFF9B72CB, "com.google.android.apps.bard", R.drawable.ic_ai_gemini, "https://gemini.google.com/app?q="),
+    CLAUDE("Claude", 0xFFE8915B, 0xFFC2410C, "com.anthropic.claude", R.drawable.ic_ai_claude, "https://claude.ai/new?q="),
+    PERPLEXITY("Perplexity", 0xFF22B8CB, 0xFF1A6B78, "ai.perplexity.app.android", R.drawable.ic_ai_perplexity, "https://www.perplexity.ai/search?q=");
 
     fun urlFor(text: String): String =
         if (text.isBlank()) queryUrl.substringBefore("?")

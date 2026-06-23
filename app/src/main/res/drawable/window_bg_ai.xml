@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 콜드 스타트 첫 프레임용 다크 배경 (디자인 런치 페이지 베이스 #08060F) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:type="radial"
+        android:gradientRadius="600"
+        android:centerX="0.3"
+        android:centerY="0.15"
+        android:startColor="#1A1140"
+        android:endColor="#08060F" />
+</shape>

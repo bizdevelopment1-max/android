@@ -18,7 +18,8 @@ import org.json.JSONObject
 class DashBridge(
     private val textSelected: (String) -> Unit,
     private val sectionVisible: (String) -> Unit,
-    private val keywordFound: (String) -> Unit
+    private val keywordFound: (String) -> Unit,
+    private val navExtracted: (String) -> Unit
 ) {
     @JavascriptInterface
     fun onTextSelected(text: String) = textSelected(text)
@@ -28,12 +29,16 @@ class DashBridge(
 
     @JavascriptInterface
     fun onKeywordFound(keywords: String) = keywordFound(keywords)
+
+    /** 사이트 왼쪽 내비에서 추출한 라벨 목록(JSON 배열) */
+    @JavascriptInterface
+    fun onNavExtracted(json: String) = navExtracted(json)
 }
 
 /** WebView 초기화, JS 주입, 핀치 줌 등 WebView 관련 로직 */
 object WebViewManager {
 
-    const val DASHBOARD_URL = "https://bizdevelopment1-max.github.io/health/"
+    const val DASHBOARD_URL = "https://bizdevelopment1-max.github.io/ai/"
     private const val INTERNAL_HOST = "bizdevelopment1-max.github.io"
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -43,6 +48,7 @@ object WebViewManager {
         onTextSelected: (String) -> Unit,
         onSectionVisible: (String) -> Unit,
         onKeywordFound: (String) -> Unit,
+        onNavExtracted: (String) -> Unit,
         onProgress: (Int) -> Unit,
         onPageFinished: (WebView) -> Unit,
         onMainFrameError: () -> Unit
@@ -55,11 +61,11 @@ object WebViewManager {
             useWideViewPort = true
             builtInZoomControls = false
             textZoom = appSettings.textZoom
-            userAgentString = "$userAgentString HealthDashApp/1.0"
+            userAgentString = "$userAgentString MXAIInsights/1.0"
             cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
         }
         wv.addJavascriptInterface(
-            DashBridge(onTextSelected, onSectionVisible, onKeywordFound),
+            DashBridge(onTextSelected, onSectionVisible, onKeywordFound, onNavExtracted),
             "AndroidBridge"
         )
         wv.webChromeClient = object : WebChromeClient() {
@@ -114,8 +120,10 @@ object WebViewManager {
     fun navigateToSection(wv: WebView, sectionId: String, label: String) {
         val idQ = JSONObject.quote(sectionId)
         val labelQ = JSONObject.quote(label)
+        // 라벨이 일치하는 왼쪽 사이드바 항목을 직접 찾아 클릭(이동)하는 것을 최우선으로
         val js = """
             (function() {
+              if (window.HD_NAV_BY_LABEL && $labelQ) { if (window.HD_NAV_BY_LABEL($labelQ)) return; }
               if (window.HD_NAV) { window.HD_NAV($idQ, $labelQ); return; }
               var el = document.getElementById($idQ);
               if (el) el.scrollIntoView({behavior:'smooth'});
@@ -293,6 +301,166 @@ object WebViewManager {
           window.DASH_SEARCH = window.DASH_SEARCH || function(query) {
             window.dispatchEvent(new CustomEvent('nativeSearch', { detail: { query: query } }));
           };
+
+          // 사이트 '왼쪽 세로 사이드바'를 추출해 하단 탭과 일치시키기
+          window.HD_EXTRACT_NAV = function() {
+            function txt(el) { return (el.textContent || '').replace(/\s+/g, ' ').trim(); }
+            function visible(el) {
+              if (!el) return false;
+              var r = el.getBoundingClientRect();
+              if (r.width < 1 || r.height < 1) return false;
+              var st = getComputedStyle(el);
+              return st.display !== 'none' && st.visibility !== 'hidden' && st.opacity !== '0';
+            }
+            function leafItems(c) {
+              var raw = Array.prototype.slice.call(
+                c.querySelectorAll('a, button, li, [role="tab"], [role="menuitem"], [role="button"]'));
+              var seen = {}, list = [];
+              raw.forEach(function(it) {
+                if (!visible(it)) return;
+                var t = txt(it);
+                if (!t || t.length > 28) return;
+                if (it.querySelector('a, button, [role="tab"], [role="menuitem"]')) return; // 잎 노드만
+                if (seen[t]) return;
+                seen[t] = 1; list.push(it);
+              });
+              return list;
+            }
+            // 1) 이미 찾아둔 컨테이너가 유효하면 그대로 재사용 (대시보드 라이브 갱신에도 탭이 흔들리지 않게)
+            var cached = window.__HD_NAV_C__;
+            if (cached && document.body.contains(cached) && visible(cached)) {
+              var cl = leafItems(cached);
+              if (cl.length >= 3) { window.__HD_NAV__ = cl; return cl.map(txt); }
+            }
+            // 2) 왼쪽·세로·좁고·키 큰 사이드바를 우선 점수화
+            var sel = 'nav, aside, [role="navigation"], [role="tablist"], [role="menu"], [role="menubar"],' +
+              ' [class*="sidebar"], [class*="side-nav"], [class*="sidenav"], [class*="drawer"],' +
+              ' [class*="menu"], [class*="nav"], [id*="sidebar"], [id*="nav"]';
+            var containers = Array.prototype.slice.call(document.querySelectorAll(sel));
+            var best = null, bestC = null, bestScore = -1;
+            var vw = window.innerWidth, vh = window.innerHeight;
+            containers.forEach(function(c) {
+              if (!visible(c)) return;
+              var list = leafItems(c);
+              if (list.length < 3 || list.length > 26) return;
+              var r = c.getBoundingClientRect();
+              var score = list.length;
+              if (r.left < vw * 0.35) score += 8;       // 왼쪽
+              else if (r.left < vw * 0.5) score += 3;
+              if (r.height >= r.width) score += 5;       // 세로
+              if (r.width < vw * 0.42) score += 3;       // 좁음
+              if (r.height > vh * 0.3) score += 2;       // 키 큰 사이드바
+              if (score > bestScore) { bestScore = score; best = list; bestC = c; }
+            });
+            if (!best || best.length < 3) return null;
+            window.__HD_NAV_C__ = bestC;
+            window.__HD_NAV__ = best;
+            return best.map(txt);
+          };
+
+          // 공백·구분자(·,•,-,_,/,(),., 등)를 모두 제거해 라벨 표기 차이에도 매칭되도록
+          function hdNorm(s) { return (s || '').replace(/[\s·•・\-_/().,:|]+/g, '').toLowerCase(); }
+
+          function hdClickEl(el) {
+            try {
+              el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              ['pointerdown', 'mousedown', 'mouseup', 'click'].forEach(function(type) {
+                try { el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window })); } catch (e) {}
+              });
+              if (typeof el.click === 'function') { try { el.click(); } catch (e) {} }
+              // 앵커(#섹션) 직접 스크롤 폴백
+              var a = (el.tagName === 'A') ? el : el.querySelector('a') || el.closest('a');
+              if (a && a.getAttribute('href') && a.getAttribute('href').charAt(0) === '#') {
+                var t = document.getElementById(a.getAttribute('href').slice(1));
+                if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+              return true;
+            } catch (e) { return false; }
+          }
+
+          // 라벨(텍스트)이 일치하는 사이드바/내비 항목을 문서 전체에서 찾아 클릭 — 고정 탭 연결용
+          window.HD_NAV_BY_LABEL = function(label) {
+            try {
+              var target = hdNorm(label);
+              if (!target) return false;
+              var exact = null, partial = null;
+              // 1차: 시맨틱 클릭 요소
+              var sel = 'a, button, [role="tab"], [role="menuitem"], [role="button"], li,' +
+                ' [class*="item"], [class*="nav"], [class*="menu"], [class*="tab"]';
+              var els = Array.prototype.slice.call(document.querySelectorAll(sel));
+              for (var i = 0; i < els.length; i++) {
+                var el = els[i];
+                if (el.querySelector('a, button, [role="tab"], [role="menuitem"]')) continue; // 잎 노드만
+                var t = hdNorm(el.textContent);
+                if (!t) continue;
+                if (t === target) { exact = el; break; }
+                if (!partial && Math.abs(t.length - target.length) <= 3 &&
+                    (t.indexOf(target) >= 0 || target.indexOf(t) >= 0)) partial = el;
+              }
+              var pick = exact || partial;
+              // 2차: 정확히 같은 텍스트의 작은 요소(div/span) 중 클릭 가능해 보이는 것
+              if (!pick) {
+                var all = document.querySelectorAll('div, span, p');
+                for (var j = 0; j < all.length; j++) {
+                  var e = all[j];
+                  if (e.children.length > 3) continue;
+                  if (hdNorm(e.textContent) !== target) continue;
+                  if (getComputedStyle(e).cursor === 'pointer') { pick = e; break; }
+                  if (!pick) pick = e;
+                }
+              }
+              if (pick) return hdClickEl(pick);
+            } catch (e) {}
+            return false;
+          };
+
+          // 클릭 시점에 최신 내비를 다시 추출해 라벨 우선, 인덱스 폴백으로 클릭
+          window.HD_NAV_GO = function(i, label) {
+            try {
+              window.HD_EXTRACT_NAV();
+              var items = window.__HD_NAV__ || [];
+              var el = null;
+              if (label) {
+                var target = hdNorm(label);
+                for (var j = 0; j < items.length; j++) {
+                  if (hdNorm(items[j].textContent) === target) { el = items[j]; break; }
+                }
+                if (!el) for (var k = 0; k < items.length; k++) {
+                  var tt = hdNorm(items[k].textContent);
+                  if (tt && (tt.indexOf(target) >= 0 || target.indexOf(tt) >= 0)) { el = items[k]; break; }
+                }
+              }
+              if (!el && i >= 0 && i < items.length) el = items[i];
+              if (el) return hdClickEl(el);
+            } catch (e) {}
+            return false;
+          };
+          window.HD_NAV_CLICK = function(i) { return window.HD_NAV_GO(i, ''); };
+
+          var hdLastNav = '';
+          function hdReportNav() {
+            try {
+              var labels = window.HD_EXTRACT_NAV();
+              if (labels && labels.length >= 2 && window.AndroidBridge && AndroidBridge.onNavExtracted) {
+                var key = labels.join('|');
+                if (key === hdLastNav) return;     // 변경 없으면 무시
+                hdLastNav = key;
+                AndroidBridge.onNavExtracted(JSON.stringify(labels));
+              }
+            } catch (e) {}
+          }
+          hdReady(function() { hdReportNav(); });
+          setTimeout(hdReportNav, 1000);
+          setTimeout(hdReportNav, 2500);
+          // 왼쪽 내비가 바뀌면(SPA 라우팅 등) 하단 탭도 자동 갱신
+          try {
+            var hdT = null;
+            var hdObs = new MutationObserver(function() {
+              if (hdT) clearTimeout(hdT);
+              hdT = setTimeout(hdReportNav, 350);
+            });
+            hdObs.observe(document.body, { childList: true, subtree: true });
+          } catch (e) {}
 
           // 플로팅 버튼 스크롤 — 윈도우 또는 가장 큰 내부 스크롤 컨테이너를 자동 감지
           window.HD_SCROLL = function(frac) {

@@ -11,13 +11,16 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.KeyEvent
-import android.view.ViewGroup
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.healthdash.app.ui.AiSelectionBar
 import com.healthdash.app.ui.BookmarkSheet
 import com.healthdash.app.ui.BottomNavBar
@@ -47,6 +49,7 @@ import com.healthdash.app.ui.CollapsedBarHandle
 import com.healthdash.app.ui.FabGroup
 import com.healthdash.app.ui.HealthDashTheme
 import com.healthdash.app.ui.HistorySheet
+import com.healthdash.app.ui.LaunchScreen
 import com.healthdash.app.ui.SearchOverlay
 import com.healthdash.app.ui.SettingsSheet
 import kotlinx.coroutines.launch
@@ -58,6 +61,7 @@ class MainActivity : ComponentActivity() {
     private var dashWebView: WebView? = null
     private var ttsManager: TtsManager? = null
     private var lastSearchQuery: String = ""
+    private var forceRefreshPending = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,18 +69,41 @@ class MainActivity : ComponentActivity() {
         ttsManager = TtsManager(this)
         registerNetworkCallback()
         setContent {
-            HealthDashTheme {
-                MainScreen()
+            val themeMode by vm.themeMode.collectAsState()
+            val systemDark = isSystemInDarkTheme()
+            val dark = when (themeMode) {
+                1 -> false
+                2 -> true
+                else -> systemDark
+            }
+            HealthDashTheme(darkTheme = dark) {
+                val showLaunch by vm.showLaunch.collectAsState()
+                val launchTheme by vm.launchTheme.collectAsState()
+                Box(Modifier.fillMaxSize()) {
+                    MainScreen(dark)
+                    AnimatedVisibility(
+                        visible = showLaunch,
+                        exit = fadeOut(animationSpec = tween(400))
+                    ) {
+                        LaunchScreen(
+                            themeIndex = launchTheme,
+                            onSelectTheme = { vm.setLaunchTheme(it) },
+                            onStart = { vm.dismissLaunch() }
+                        )
+                    }
+                }
             }
         }
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    private fun MainScreen() {
+    private fun MainScreen(dark: Boolean) {
         val textZoom by vm.textZoom.collectAsState()
         val selectedText by vm.selectedText.collectAsState()
         val activeSection by vm.activeSection.collectAsState()
+        val navTabs by vm.navTabs.collectAsState()
+        val themeMode by vm.themeMode.collectAsState()
         val isLoading by vm.isLoading.collectAsState()
         val isOffline by vm.isOffline.collectAsState()
         val bookmarks by vm.bookmarks.collectAsState()
@@ -90,7 +117,6 @@ class MainActivity : ComponentActivity() {
         val keywords by vm.keywords.collectAsState()
         val barVisible by vm.barVisible.collectAsState()
         val barScale by vm.barScale.collectAsState()
-        val dark = isSystemInDarkTheme()
         val snackbarHostState = remember { SnackbarHostState() }
 
         LaunchedEffect(textZoom) {
@@ -160,13 +186,14 @@ class MainActivity : ComponentActivity() {
                             BottomNavBar(
                                 activeSection = activeSection,
                                 barScale = barScale,
+                                tabs = navTabs,
                                 onTabClick = { tab ->
                                     vm.setActiveSection(tab.id)
-                                    dashWebView?.let { WebViewManager.navigateToSection(it, tab.id, tab.label) }
+                                    dashWebView?.let { WebViewManager.navigateToSection(it, tab.id, tab.navLabel) }
                                 },
                                 onMoveSection = { delta ->
                                     val tab = vm.moveSection(delta)
-                                    dashWebView?.let { WebViewManager.navigateToSection(it, tab.id, tab.label) }
+                                    dashWebView?.let { WebViewManager.navigateToSection(it, tab.id, tab.navLabel) }
                                 },
                                 onAiClick = { app -> quickLaunchAi(app) },
                                 onSettingsClick = { vm.setShowSettings(true) },
@@ -202,7 +229,7 @@ class MainActivity : ComponentActivity() {
                 bookmarks = bookmarks,
                 onSelect = { bookmark ->
                     vm.setActiveSection(bookmark.sectionId)
-                    dashWebView?.let { WebViewManager.navigateToSection(it, bookmark.sectionId, bookmark.label) }
+                    dashWebView?.let { WebViewManager.navigateToSection(it, bookmark.sectionId, bookmark.sectionId) }
                     vm.setShowBookmarks(false)
                 },
                 onDelete = { vm.deleteBookmark(it) },
@@ -227,6 +254,11 @@ class MainActivity : ComponentActivity() {
                 onTtsSpeed = { vm.setTtsSpeed(it) },
                 barScale = barScale,
                 onBarScale = { vm.setBarScale(it) },
+                themeMode = themeMode,
+                onThemeMode = { mode ->
+                    vm.setThemeMode(mode)
+                    dashWebView?.let { WebViewManager.injectTheme(it, isDarkMode()) }
+                },
                 keywords = keywords,
                 onKeywords = { vm.setKeywords(it) },
                 onOpenSearch = {
@@ -262,22 +294,29 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** 대시보드 WebView 생성 — 어제 정상 동작하던 구조(SwipeRefreshLayout 컨테이너) 그대로 */
-    private fun createDashboardView(ctx: android.content.Context): SwipeRefreshLayout {
-        val swipe = SwipeRefreshLayout(ctx)
+    /**
+     * 대시보드 WebView 생성 — 당겨서 새로고침 없이 네이티브 스크롤만.
+     * WebView를 명시적 MATCH_PARENT 크기의 FrameLayout에 담아 측정 누락으로 인한 흰 화면을 방지.
+     */
+    private fun createDashboardView(ctx: android.content.Context): android.widget.FrameLayout {
+        val frame = android.widget.FrameLayout(ctx)
         val wv = WebViewManager.createDashboardWebView(
             context = this,
             appSettings = appSettings,
             onTextSelected = { text -> vm.setSelectedText(text) },
-            onSectionVisible = { id -> vm.setActiveSection(id) },
+            onSectionVisible = { id -> vm.onScrollSpySection(id) },
             onKeywordFound = { keywords ->
                 runOnUiThread {
                     Toast.makeText(this, "관심 키워드 발견: $keywords", Toast.LENGTH_LONG).show()
                 }
             },
+            onNavExtracted = { json -> runOnUiThread { applyExtractedNav(json) } },
             onProgress = { progress -> vm.setLoading(progress in 1..99) },
             onPageFinished = { web ->
-                swipe.isRefreshing = false
+                if (forceRefreshPending) {
+                    forceRefreshPending = false
+                    web.settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+                }
                 WebViewManager.injectInitScript(web)
                 WebViewManager.injectTheme(web, isDarkMode())
                 WebViewManager.injectHighContrast(web, vm.highContrast.value)
@@ -305,20 +344,23 @@ class MainActivity : ComponentActivity() {
             }
         }
         dashWebView = wv
-        swipe.addView(
-            wv,
-            ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        )
-        swipe.setOnRefreshListener { wv.reload() }
+        val mp = android.view.ViewGroup.LayoutParams.MATCH_PARENT
+        wv.layoutParams = android.widget.FrameLayout.LayoutParams(mp, mp)
+        frame.addView(wv)
+        frame.layoutParams = android.view.ViewGroup.LayoutParams(mp, mp)
         wv.loadUrl(WebViewManager.DASHBOARD_URL)
-        return swipe
+        return frame
     }
 
-    /** 대시보드 새로고침 — 캐시를 완전히 비우고 처음부터 다시 로드 */
+    /** 강력 새로고침 (Ctrl+Shift+R 처럼) — 캐시·웹 저장소를 비우고 네트워크에서 강제 재로드 */
     private fun reloadDashboard() {
         val wv = dashWebView ?: return
+        wv.clearCache(true)
         WebViewManager.clearWebStorage(wv)
+        wv.settings.cacheMode = WebSettings.LOAD_NO_CACHE
+        forceRefreshPending = true
         wv.loadUrl(WebViewManager.DASHBOARD_URL)
+        Toast.makeText(this, "강력 새로고침 중…", Toast.LENGTH_SHORT).show()
     }
 
     /** 하단 바 AI 로고 탭 — 선택 텍스트가 있으면 함께 전달, 없으면 앱만 실행 */
@@ -416,8 +458,24 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun isDarkMode(): Boolean =
-        (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+    /** 사이트 내비에서 추출한 라벨(JSON 배열)을 하단 탭에 반영 */
+    private fun applyExtractedNav(json: String) {
+        try {
+            val arr = org.json.JSONArray(json)
+            val labels = ArrayList<String>(arr.length())
+            for (i in 0 until arr.length()) labels.add(arr.optString(i))
+            vm.setNavLabels(labels)
+        } catch (_: Exception) {
+        }
+    }
+
+    /** 테마 설정(시스템/라이트/다크)을 반영한 다크 여부 — WebView 테마 주입용 */
+    private fun isDarkMode(): Boolean = when (vm.themeMode.value) {
+        1 -> false
+        2 -> true
+        else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
+    }
 
     private fun registerNetworkCallback() {
         try {

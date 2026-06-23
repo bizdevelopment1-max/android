@@ -1,18 +1,29 @@
 package com.healthdash.app.ui
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -21,25 +32,38 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.Apartment
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.CandlestickChart
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Newspaper
+import androidx.compose.material.icons.filled.Paid
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Insights
-import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,12 +71,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
@@ -61,38 +88,74 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.healthdash.app.AiApp
 
-data class NavTab(val id: String, val label: String, val icon: ImageVector, val accent: Color)
+// label = 하단 바 표시 문구(짧게), navLabel = 사이트 사이드바의 실제 텍스트(이동 매칭용)
+data class NavTab(
+    val id: String,
+    val label: String,
+    val navLabel: String,
+    val icon: ImageVector,
+    val accent: Color
+)
 
+// 사이트 왼쪽 사이드바 11개 항목 — 표시 문구는 짧게, 이동은 navLabel(원래 텍스트)로 연결
 val NAV_TABS = listOf(
-    NavTab("overview", "오버뷰", Icons.Filled.GridView, Color(0xFF1428A0)),
-    NavTab("device", "디바이스 헬스", Icons.Filled.Devices, Color(0xFF0277BD)),
-    NavTab("ai", "AI 네이티브", Icons.Filled.SmartToy, Color(0xFF7B1FA2)),
-    NavTab("startup", "체중·피트니스", Icons.Filled.FitnessCenter, Color(0xFF2E7D32)),
-    NavTab("vp", "밸류 프로포지션", Icons.Filled.TrackChanges, Color(0xFFC62828)),
-    NavTab("articles", "데일리 기사", Icons.AutoMirrored.Filled.Article, Color(0xFFEF6C00)),
-    NavTab("charts", "정량 분석", Icons.Filled.BarChart, Color(0xFF00838F)),
-    NavTab("monthly", "월별 추이", Icons.AutoMirrored.Filled.TrendingUp, Color(0xFF6D4C41)),
-    NavTab("insights", "핵심 인사이트", Icons.Filled.Insights, Color(0xFFAD1457)),
-    NavTab("dynamics", "경쟁 다이내믹스", Icons.Filled.Map, Color(0xFF283593)),
-    NavTab("bizmodel", "수익화 모델", Icons.Filled.Business, Color(0xFF00695C)),
-    NavTab("reports", "리서치 리포트", Icons.Filled.Description, Color(0xFF6A1B9A))
+    NavTab("Executive Summary", "Summary", "Executive Summary", Icons.Filled.Dashboard, Color(0xFF7C3AED)),
+    NavTab("데일리 기사", "News", "데일리 기사", Icons.Filled.Newspaper, Color(0xFF4F46E5)),
+    NavTab("AI 네이티브", "AI Native", "AI 네이티브", Icons.Filled.AutoAwesome, Color(0xFF2563EB)),
+    NavTab("빅테크 AI", "빅테크 AI", "빅테크 AI", Icons.Filled.Apartment, Color(0xFF0891B2)),
+    NavTab("AI 스타트업", "AI 스타트업", "AI 스타트업", Icons.Filled.RocketLaunch, Color(0xFF0D9488)),
+    NavTab("수익화 모델", "Biz Model", "수익화 모델", Icons.Filled.Paid, Color(0xFF059669)),
+    NavTab("성능·신뢰성 격차", "신뢰성 Gap", "성능·신뢰성 격차", Icons.Filled.Speed, Color(0xFFD97706)),
+    NavTab("리서치 리포트", "Research", "리서치 리포트", Icons.Filled.Science, Color(0xFFEA580C)),
+    NavTab("정량 분석", "정량 분석", "정량 분석", Icons.Filled.Analytics, Color(0xFFDB2777)),
+    NavTab("분기별 매출 추이", "매출 Trend", "분기별 매출 추이", Icons.AutoMirrored.Filled.TrendingUp, Color(0xFFDC2626)),
+    NavTab("주가 차트", "Stock", "주가 차트", Icons.Filled.CandlestickChart, Color(0xFF7E22CE))
 )
 
-/** 바 상단의 컬러 스트립에 쓰이는 액센트 그라데이션 */
+/** 바 상단 컬러 스트립 (블루 브랜드 그라데이션) */
 private val ACCENT_STRIP = listOf(
-    Color(0xFF1428A0), Color(0xFF7B1FA2), Color(0xFFC62828),
-    Color(0xFFEF6C00), Color(0xFF2E7D32), Color(0xFF00838F), Color(0xFF1428A0)
+    Color(0xFF1E40AF), Color(0xFF2563EB), Color(0xFF0891B2),
+    Color(0xFF22D3EE), Color(0xFF3B82F6), Color(0xFF1D4ED8), Color(0xFF1E40AF)
 )
+
+// 동적 탭(사이트 내비에서 추출)에 순환 배정할 아이콘 / 색상
+private val DYNAMIC_ICONS = listOf(
+    Icons.Filled.GridView, Icons.Filled.SmartToy, Icons.Filled.Speed, Icons.Filled.PieChart,
+    Icons.Filled.Payments, Icons.Filled.Business, Icons.Filled.AutoAwesome,
+    Icons.AutoMirrored.Filled.Article, Icons.Filled.Gavel, Icons.Filled.Lightbulb,
+    Icons.Filled.Insights, Icons.Filled.Description
+)
+private val DYNAMIC_ACCENTS = listOf(
+    Color(0xFF2563EB), Color(0xFF4F46E5), Color(0xFF0891B2), Color(0xFF0D9488),
+    Color(0xFF059669), Color(0xFFD97706), Color(0xFFEA580C), Color(0xFFDB2777),
+    Color(0xFFDC2626), Color(0xFF1D4ED8), Color(0xFFC026D3), Color(0xFF7E22CE)
+)
+
+/** 사이트 왼쪽 내비에서 추출한 라벨로 하단 탭을 만든다 (id = "idx:N", 클릭은 인덱스 기반). */
+fun buildNavTabs(labels: List<String>): List<NavTab> = labels.mapIndexed { i, label ->
+    val clean = prettifyNavLabel(label)
+    NavTab(
+        id = "idx:$i",
+        label = clean,
+        navLabel = clean,
+        icon = DYNAMIC_ICONS[i % DYNAMIC_ICONS.size],
+        accent = DYNAMIC_ACCENTS[i % DYNAMIC_ACCENTS.size]
+    )
+}
+
+// 하단 탭은 사이트 왼쪽 내비를 동적으로 그대로 반영한다(라벨 매칭으로 연결되므로 원본 유지).
+private fun prettifyNavLabel(label: String): String = label.trim()
 
 /**
  * 반투명 플로팅 하단 바 — 콘텐츠 위에 떠 있어 뒤가 비쳐 보인다.
  * ◀ ▶ 화살표(고정)로 한 칸씩 이동, 나머지(탭 12개 + AI 로고 4개 + 설정)는 함께 슬라이드.
- * 우측 ˅ 핸들로 접을 수 있고, barScale로 전체 크기 조절(설정에서 변경).
+ * 우측 ˅ 핸들로 접을 수 있고, barScale로 전체 크기 조절(설정/상단 핸들 드래그).
  */
 @Composable
 fun BottomNavBar(
     activeSection: String,
     barScale: Float,
+    tabs: List<NavTab>,
     onTabClick: (NavTab) -> Unit,
     onMoveSection: (Int) -> Unit,
     onAiClick: (AiApp) -> Unit,
@@ -102,12 +165,11 @@ fun BottomNavBar(
 ) {
     val s = barScale.coerceIn(0.7f, 1.4f)
     val scrollState = rememberScrollState()
-    val activeIndex = NAV_TABS.indexOfFirst { it.id == activeSection }
+    val activeIndex = tabs.indexOfFirst { it.id == activeSection }
 
-    // 활성 탭이 바뀌면 해당 위치로 탭 바를 자동 스크롤
-    LaunchedEffect(activeIndex) {
-        if (activeIndex >= 0 && scrollState.maxValue > 0 && NAV_TABS.size > 1) {
-            val target = scrollState.maxValue * activeIndex / (NAV_TABS.size - 1)
+    LaunchedEffect(activeIndex, tabs.size) {
+        if (activeIndex >= 0 && scrollState.maxValue > 0 && tabs.size > 1) {
+            val target = scrollState.maxValue * activeIndex / (tabs.size - 1)
             scrollState.animateScrollTo(target)
         }
     }
@@ -116,14 +178,14 @@ fun BottomNavBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+            .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
             .background(
                 Brush.verticalGradient(
-                    listOf(surface.copy(alpha = 0.60f), surface.copy(alpha = 0.90f))
+                    listOf(surface.copy(alpha = 0.78f), surface.copy(alpha = 0.95f))
                 )
             )
     ) {
-        // 상단 액센트 컬러 스트립 + 크기 조절 핸들 (위로 드래그 = 크게, 아래로 = 작게)
+        // 상단 컬러 스트립 + 크기 조절 핸들 (위로 드래그 = 크게, 아래로 = 작게)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -139,15 +201,15 @@ fun BottomNavBar(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(2.5.dp)
+                    .height(3.dp)
                     .background(Brush.horizontalGradient(ACCENT_STRIP))
             )
             Box(
                 modifier = Modifier
-                    .width(44.dp)
+                    .width(46.dp)
                     .height(5.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f))
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             )
         }
         Row(
@@ -165,7 +227,7 @@ fun BottomNavBar(
                     .horizontalScroll(scrollState),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                NAV_TABS.forEach { tab ->
+                tabs.forEach { tab ->
                     BarItem(
                         label = tab.label,
                         accent = tab.accent,
@@ -189,11 +251,19 @@ fun BottomNavBar(
                         scale = s,
                         onClick = { onAiClick(app) }
                     ) { _, iconSize ->
-                        Image(
-                            painter = painterResource(app.iconRes),
-                            contentDescription = app.displayName,
-                            modifier = Modifier.size(iconSize)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(iconSize + 6.dp)
+                                .clip(CircleShape)
+                                .background(Color.White),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(app.iconRes),
+                                contentDescription = app.displayName,
+                                modifier = Modifier.size(iconSize - 1.dp)
+                            )
+                        }
                     }
                 }
 
@@ -210,7 +280,7 @@ fun BottomNavBar(
                 }
                 Spacer(Modifier.width(4.dp))
             }
-            IconButton(onClick = { onMoveSection(1) }, enabled = activeIndex < NAV_TABS.size - 1) {
+            IconButton(onClick = { onMoveSection(1) }, enabled = activeIndex < tabs.size - 1) {
                 Icon(Icons.Filled.ChevronRight, contentDescription = "다음 탭")
             }
             IconButton(onClick = onCollapse) {
@@ -231,22 +301,25 @@ fun CollapsedBarHandle(onExpand: () -> Unit) {
         modifier = Modifier
             .padding(bottom = 4.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
+            .background(
+                Brush.horizontalGradient(listOf(Color(0xFF1E40AF), Color(0xFF2563EB)))
+            )
             .clickable { onExpand() }
             .navigationBarsPadding()
-            .padding(horizontal = 18.dp, vertical = 4.dp)
+            .padding(horizontal = 18.dp, vertical = 5.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 Icons.Filled.ExpandLess,
                 contentDescription = "하단 바 펼치기",
-                tint = MaterialTheme.colorScheme.primary
+                tint = Color.White
             )
+            Spacer(Modifier.width(4.dp))
             Text(
-                "BD Health",
+                "MX AI Insights",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = Color.White
             )
         }
     }
@@ -263,9 +336,16 @@ private fun BarDivider() {
     )
 }
 
+private fun lighten(c: Color, f: Float) = Color(
+    red = c.red + (1f - c.red) * f,
+    green = c.green + (1f - c.green) * f,
+    blue = c.blue + (1f - c.blue) * f,
+    alpha = 1f
+)
+
 /**
- * 하단 바 공통 아이템 — 선택 시 고유 색상 필 배경 + 스프링 바운스 + 색상 전환 애니메이션.
- * scale로 아이콘/글자/여백 크기를 함께 조절한다.
+ * 하단 바 공통 아이템 — 선택 시 아이콘이 그라데이션 원형 배지로 바뀌며
+ * 스프링 스케일인 + 은은한 글로우 + 부드러운 바운스(bob) 애니메이션이 적용된다.
  */
 @Composable
 private fun BarItem(
@@ -278,47 +358,129 @@ private fun BarItem(
     icon: @Composable (Color, androidx.compose.ui.unit.Dp) -> Unit
 ) {
     val neutral = MaterialTheme.colorScheme.onSurfaceVariant
-    val pillColor by animateColorAsState(
-        targetValue = if (active) accent.copy(alpha = 0.15f) else Color.Transparent,
-        label = "pill"
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+
+    // 실제 버튼처럼: 누르면 통통 줄었다 스프링백
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.82f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessHigh),
+        label = "press"
     )
-    // 아이콘은 항상 고유 색상 (비활성 시 연하게), 레이블은 활성/AI 항목만 컬러
-    val iconColor by animateColorAsState(
-        targetValue = if (active) accent else accent.copy(alpha = 0.72f),
-        label = "icon"
+    // 눌릴 때 화려한 액센트 채움 강도(0→1)
+    val pressGlow by animateFloatAsState(
+        targetValue = if (pressed) 1f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessHigh),
+        label = "pressGlow"
+    )
+    val iconTint by animateColorAsState(
+        targetValue = if (pressed || active) Color.White else accent.copy(alpha = 0.82f),
+        label = "iconTint"
     )
     val labelColor by animateColorAsState(
-        targetValue = if (active || alwaysAccentLabel) accent else neutral,
+        targetValue = when {
+            pressed -> Color.White
+            active || alwaysAccentLabel -> accent
+            else -> neutral
+        },
         label = "label"
     )
-    val iconScale by animateFloatAsState(
-        targetValue = if (active) 1.18f else 1f,
+    // 배지 스케일인 (선택)
+    val badgeScale by animateFloatAsState(
+        targetValue = if (active) 1f else 0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMediumLow
         ),
-        label = "scale"
+        label = "badge"
     )
+    // 활성 시 위아래로 부드럽게 떠다니는 bob
+    val bob by rememberInfiniteTransition(label = "bob").animateFloat(
+        initialValue = -1.6f,
+        targetValue = 1.6f,
+        animationSpec = infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "bobV"
+    )
+    // 선택/누름 시 글자 팝(스프링 스케일)
+    val labelScale by animateFloatAsState(
+        targetValue = if (pressed) 1.12f else if (active) 1.08f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "labelScale"
+    )
+    val badgeGrad = Brush.linearGradient(listOf(lighten(accent, 0.2f), accent, accent))
+    val pressGrad = Brush.verticalGradient(listOf(lighten(accent, 0.28f), accent))
+    val activeFaint = Brush.verticalGradient(listOf(accent.copy(alpha = 0.16f), Color.Transparent))
+    val container = (32 * scale).dp
 
     Column(
         modifier = Modifier
-            .padding(horizontal = 2.dp, vertical = (4 * scale).dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(pillColor)
-            .clickable { onClick() }
-            .padding(horizontal = (9 * scale).dp, vertical = (6 * scale).dp)
-            .widthIn(min = (44 * scale).dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 2.dp, vertical = (3 * scale).dp)
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .shadow(
+                elevation = (7 * pressGlow).dp,
+                shape = RoundedCornerShape(16.dp),
+                clip = false,
+                ambientColor = accent,
+                spotColor = accent
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .drawBehind {
+                if (active && pressGlow < 0.99f) drawRect(activeFaint)
+                if (pressGlow > 0.001f) drawRect(pressGrad, alpha = pressGlow)
+            }
+            .clickable(interactionSource = interaction, indication = LocalIndication.current) { onClick() }
+            .padding(horizontal = (8 * scale).dp, vertical = (5 * scale).dp)
+            .widthIn(min = (46 * scale).dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Box(Modifier.scale(iconScale)) {
-            icon(iconColor, (22 * scale).dp)
+        // 아이콘 + 글자가 선택 시 함께 떠오르고(bob)
+        Column(
+            modifier = Modifier.graphicsLayer { if (active) translationY = bob.dp.toPx() },
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier.size(container),
+                contentAlignment = Alignment.Center
+            ) {
+                // 소프트 글로우 (블러 API 없이 radial 그라데이션으로 구현)
+                if (badgeScale > 0.01f) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .graphicsLayer {
+                                scaleX = 1.5f * badgeScale; scaleY = 1.5f * badgeScale; alpha = 0.45f * badgeScale
+                            }
+                            .background(
+                                Brush.radialGradient(listOf(accent.copy(alpha = 0.6f), Color.Transparent)),
+                                CircleShape
+                            )
+                    )
+                }
+                // 그라데이션 원형 배지 (선택 시 스케일인)
+                if (badgeScale > 0.01f) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .graphicsLayer { scaleX = badgeScale; scaleY = badgeScale }
+                            .clip(CircleShape)
+                            .background(badgeGrad)
+                    )
+                }
+                icon(iconTint, (20 * scale).dp)
+            }
+            Spacer(Modifier.height(2.dp))
+            Text(
+                label,
+                color = labelColor,
+                fontSize = (10 * scale).sp,
+                fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                maxLines = 1,
+                modifier = Modifier.graphicsLayer { scaleX = labelScale; scaleY = labelScale }
+            )
         }
-        Text(
-            label,
-            color = labelColor,
-            fontSize = (10 * scale).sp,
-            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-            maxLines = 1
-        )
     }
 }

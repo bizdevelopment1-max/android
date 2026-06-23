@@ -49,6 +49,8 @@ fun SettingsSheet(
     onTtsSpeed: (Float) -> Unit,
     barScale: Float,
     onBarScale: (Float) -> Unit,
+    themeMode: Int,
+    onThemeMode: (Int) -> Unit,
     keywords: String,
     onKeywords: (String) -> Unit,
     onOpenSearch: () -> Unit,
@@ -66,6 +68,22 @@ fun SettingsSheet(
                 .padding(horizontal = 16.dp)
         ) {
             Text("설정", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(16.dp))
+
+            Text("테마 (재시작 후에도 유지)", style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(8.dp))
+            val themeLabels = listOf("시스템", "라이트", "다크")
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                themeLabels.forEachIndexed { index, label ->
+                    SegmentedButton(
+                        selected = themeMode == index,
+                        onClick = { onThemeMode(index) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = themeLabels.size)
+                    ) {
+                        Text(label)
+                    }
+                }
+            }
             Spacer(Modifier.height(16.dp))
 
             Text("글꼴 크기 프리셋 (현재 ${textZoom}%)", style = MaterialTheme.typography.titleSmall)

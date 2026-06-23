@@ -9,11 +9,11 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.healthdash.app"
+        applicationId = "com.mxai.insights"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 6
+        versionName = "1.5"
     }
 
     buildTypes {
@@ -63,7 +63,6 @@ dependencies {
 
     implementation("androidx.webkit:webkit:1.11.0")
     implementation("androidx.browser:browser:1.8.0")
-    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.34.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
