@@ -11,15 +11,19 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -55,6 +59,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -194,12 +199,12 @@ fun BottomNavBar(
             IconButton(onClick = { onMoveSection(-1) }, enabled = activeIndex > 0) {
                 Icon(Icons.Filled.ChevronLeft, contentDescription = "이전 탭")
             }
-            Row(
+            Box(modifier = Modifier.weight(1f)) {
+              Row(
                 modifier = Modifier
-                    .weight(1f)
                     .horizontalScroll(scrollState),
                 verticalAlignment = Alignment.CenterVertically
-            ) {
+              ) {
                 tabs.forEach { tab ->
                     BarItem(
                         label = tab.label,
@@ -224,11 +229,19 @@ fun BottomNavBar(
                         scale = s,
                         onClick = { onAiClick(app) }
                     ) { _, iconSize ->
-                        Image(
-                            painter = painterResource(app.iconRes),
-                            contentDescription = app.displayName,
-                            modifier = Modifier.size(iconSize)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(iconSize + 6.dp)
+                                .clip(CircleShape)
+                                .background(Color.White),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(app.iconRes),
+                                contentDescription = app.displayName,
+                                modifier = Modifier.size(iconSize - 1.dp)
+                            )
+                        }
                     }
                 }
 
@@ -244,6 +257,17 @@ fun BottomNavBar(
                     Icon(Icons.Filled.Settings, contentDescription = "설정", tint = tint, modifier = Modifier.size(iconSize))
                 }
                 Spacer(Modifier.width(4.dp))
+              }
+              // 스크롤 가장자리 페이드 (콘텐츠가 부드럽게 사라지는 프로 느낌)
+              val edge = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+              Box(
+                  Modifier.align(Alignment.CenterStart).fillMaxHeight().width(16.dp)
+                      .background(Brush.horizontalGradient(listOf(edge, Color.Transparent)))
+              )
+              Box(
+                  Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(16.dp)
+                      .background(Brush.horizontalGradient(listOf(Color.Transparent, edge)))
+              )
             }
             IconButton(onClick = { onMoveSection(1) }, enabled = activeIndex < tabs.size - 1) {
                 Icon(Icons.Filled.ChevronRight, contentDescription = "다음 탭")
@@ -363,21 +387,32 @@ private fun BarItem(
     )
     val badgeGrad = Brush.linearGradient(listOf(lighten(accent, 0.18f), accent, lighten(accent, -0.0f)))
     val container = (32 * scale).dp
+    // 누름 피드백 — 모든 항목(탭/AI/설정)에서 눌렀다 떼면 통통 스프링백
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.84f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessHigh),
+        label = "press"
+    )
 
     Column(
         modifier = Modifier
             .padding(horizontal = 2.dp, vertical = (3 * scale).dp)
             .clip(RoundedCornerShape(16.dp))
             .background(pillBrush)
-            .clickable { onClick() }
+            .clickable(interactionSource = interaction, indication = LocalIndication.current) { onClick() }
             .padding(horizontal = (8 * scale).dp, vertical = (5 * scale).dp)
             .widthIn(min = (46 * scale).dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // 아이콘 + 글자가 선택 시 함께 부드럽게 떠오른다(bob)
+        // 아이콘 + 글자가 선택 시 함께 떠오르고(bob), 누르면 함께 스케일(press)
         Column(
-            modifier = Modifier.graphicsLayer { if (active) translationY = bob.dp.toPx() },
+            modifier = Modifier.graphicsLayer {
+                if (active) translationY = bob.dp.toPx()
+                scaleX = pressScale; scaleY = pressScale
+            },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(

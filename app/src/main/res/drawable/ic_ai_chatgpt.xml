@@ -1,34 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- OpenAI(ChatGPT) 6중 매듭 마크 — 브랜드 그린 -->
+<!-- OpenAI(ChatGPT) 6중 블라썸 매듭 마크 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <group android:pivotX="12" android:pivotY="12" android:rotation="0">
-        <path android:fillColor="#10A37F"
-            android:pathData="M10.6,2.6 h2.8 a1.4,1.4 0 0 1 1.4,1.4 v6.6 a2.8,2.8 0 0 1 -5.6,0 V4 a1.4,1.4 0 0 1 1.4,-1.4 Z" />
-    </group>
-    <group android:pivotX="12" android:pivotY="12" android:rotation="60">
-        <path android:fillColor="#0E8C6D"
-            android:pathData="M10.6,2.6 h2.8 a1.4,1.4 0 0 1 1.4,1.4 v6.6 a2.8,2.8 0 0 1 -5.6,0 V4 a1.4,1.4 0 0 1 1.4,-1.4 Z" />
-    </group>
-    <group android:pivotX="12" android:pivotY="12" android:rotation="120">
-        <path android:fillColor="#10A37F"
-            android:pathData="M10.6,2.6 h2.8 a1.4,1.4 0 0 1 1.4,1.4 v6.6 a2.8,2.8 0 0 1 -5.6,0 V4 a1.4,1.4 0 0 1 1.4,-1.4 Z" />
-    </group>
-    <group android:pivotX="12" android:pivotY="12" android:rotation="180">
-        <path android:fillColor="#0E8C6D"
-            android:pathData="M10.6,2.6 h2.8 a1.4,1.4 0 0 1 1.4,1.4 v6.6 a2.8,2.8 0 0 1 -5.6,0 V4 a1.4,1.4 0 0 1 1.4,-1.4 Z" />
-    </group>
-    <group android:pivotX="12" android:pivotY="12" android:rotation="240">
-        <path android:fillColor="#10A37F"
-            android:pathData="M10.6,2.6 h2.8 a1.4,1.4 0 0 1 1.4,1.4 v6.6 a2.8,2.8 0 0 1 -5.6,0 V4 a1.4,1.4 0 0 1 1.4,-1.4 Z" />
-    </group>
-    <group android:pivotX="12" android:pivotY="12" android:rotation="300">
-        <path android:fillColor="#0E8C6D"
-            android:pathData="M10.6,2.6 h2.8 a1.4,1.4 0 0 1 1.4,1.4 v6.6 a2.8,2.8 0 0 1 -5.6,0 V4 a1.4,1.4 0 0 1 1.4,-1.4 Z" />
-    </group>
-    <path android:fillColor="#FFFFFF"
-        android:pathData="M12,9.9 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" />
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <group android:pivotX="24" android:pivotY="24" android:rotation="0">
+        <path android:fillColor="#000000" android:pathData="M24,27.5 C11,23 12,11.5 24,7 C36,11.5 37,23 24,27.5 Z" /></group>
+    <group android:pivotX="24" android:pivotY="24" android:rotation="60">
+        <path android:fillColor="#000000" android:pathData="M24,27.5 C11,23 12,11.5 24,7 C36,11.5 37,23 24,27.5 Z" /></group>
+    <group android:pivotX="24" android:pivotY="24" android:rotation="120">
+        <path android:fillColor="#000000" android:pathData="M24,27.5 C11,23 12,11.5 24,7 C36,11.5 37,23 24,27.5 Z" /></group>
+    <group android:pivotX="24" android:pivotY="24" android:rotation="180">
+        <path android:fillColor="#000000" android:pathData="M24,27.5 C11,23 12,11.5 24,7 C36,11.5 37,23 24,27.5 Z" /></group>
+    <group android:pivotX="24" android:pivotY="24" android:rotation="240">
+        <path android:fillColor="#000000" android:pathData="M24,27.5 C11,23 12,11.5 24,7 C36,11.5 37,23 24,27.5 Z" /></group>
+    <group android:pivotX="24" android:pivotY="24" android:rotation="300">
+        <path android:fillColor="#000000" android:pathData="M24,27.5 C11,23 12,11.5 24,7 C36,11.5 37,23 24,27.5 Z" /></group>
+    <path android:fillColor="#FFFFFF" android:pathData="M24,24 m-5.2,0 a5.2,5.2 0 1,0 10.4,0 a5.2,5.2 0 1,0 -10.4,0" />
 </vector>
