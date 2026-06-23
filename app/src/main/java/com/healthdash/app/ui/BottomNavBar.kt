@@ -37,9 +37,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.Apartment
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.CandlestickChart
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Newspaper
+import androidx.compose.material.icons.filled.Paid
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Description
@@ -68,6 +75,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -79,21 +88,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.healthdash.app.AiApp
 
-data class NavTab(val id: String, val label: String, val icon: ImageVector, val accent: Color)
+// label = 하단 바 표시 문구(짧게), navLabel = 사이트 사이드바의 실제 텍스트(이동 매칭용)
+data class NavTab(
+    val id: String,
+    val label: String,
+    val navLabel: String,
+    val icon: ImageVector,
+    val accent: Color
+)
 
-// 사이트 왼쪽 사이드바의 클릭 항목 11개를 그대로 고정 (id=라벨, 클릭 시 라벨 매칭으로 이동)
+// 사이트 왼쪽 사이드바 11개 항목 — 표시 문구는 짧게, 이동은 navLabel(원래 텍스트)로 연결
 val NAV_TABS = listOf(
-    NavTab("Executive Summary", "Executive Summary", Icons.Filled.GridView, Color(0xFF7C3AED)),
-    NavTab("데일리 기사", "데일리 기사", Icons.AutoMirrored.Filled.Article, Color(0xFF4F46E5)),
-    NavTab("AI 네이티브", "AI 네이티브", Icons.Filled.AutoAwesome, Color(0xFF2563EB)),
-    NavTab("빅테크 AI", "빅테크 AI", Icons.Filled.Smartphone, Color(0xFF0891B2)),
-    NavTab("AI 스타트업", "AI 스타트업", Icons.Filled.RocketLaunch, Color(0xFF0D9488)),
-    NavTab("수익화 모델", "수익화 모델", Icons.Filled.Payments, Color(0xFF059669)),
-    NavTab("성능·신뢰성 격차", "성능·신뢰성 격차", Icons.Filled.Speed, Color(0xFFD97706)),
-    NavTab("리서치 리포트", "리서치 리포트", Icons.Filled.Description, Color(0xFFEA580C)),
-    NavTab("정량 분석", "정량 분석", Icons.Filled.BarChart, Color(0xFFDB2777)),
-    NavTab("분기별 매출 추이", "분기별 매출 추이", Icons.AutoMirrored.Filled.TrendingUp, Color(0xFFDC2626)),
-    NavTab("주가 차트", "주가 차트", Icons.Filled.ShowChart, Color(0xFF7E22CE))
+    NavTab("Executive Summary", "Summary", "Executive Summary", Icons.Filled.Dashboard, Color(0xFF7C3AED)),
+    NavTab("데일리 기사", "News", "데일리 기사", Icons.Filled.Newspaper, Color(0xFF4F46E5)),
+    NavTab("AI 네이티브", "AI Native", "AI 네이티브", Icons.Filled.AutoAwesome, Color(0xFF2563EB)),
+    NavTab("빅테크 AI", "빅테크 AI", "빅테크 AI", Icons.Filled.Apartment, Color(0xFF0891B2)),
+    NavTab("AI 스타트업", "AI 스타트업", "AI 스타트업", Icons.Filled.RocketLaunch, Color(0xFF0D9488)),
+    NavTab("수익화 모델", "Biz Model", "수익화 모델", Icons.Filled.Paid, Color(0xFF059669)),
+    NavTab("성능·신뢰성 격차", "신뢰성 Gap", "성능·신뢰성 격차", Icons.Filled.Speed, Color(0xFFD97706)),
+    NavTab("리서치 리포트", "Research", "리서치 리포트", Icons.Filled.Science, Color(0xFFEA580C)),
+    NavTab("정량 분석", "정량 분석", "정량 분석", Icons.Filled.Analytics, Color(0xFFDB2777)),
+    NavTab("분기별 매출 추이", "매출 Trend", "분기별 매출 추이", Icons.AutoMirrored.Filled.TrendingUp, Color(0xFFDC2626)),
+    NavTab("주가 차트", "Stock", "주가 차트", Icons.Filled.CandlestickChart, Color(0xFF7E22CE))
 )
 
 /** 바 상단 컬러 스트립 (블루 브랜드 그라데이션) */
@@ -340,15 +356,34 @@ private fun BarItem(
     icon: @Composable (Color, androidx.compose.ui.unit.Dp) -> Unit
 ) {
     val neutral = MaterialTheme.colorScheme.onSurfaceVariant
-    val labelColor by animateColorAsState(
-        targetValue = if (active || alwaysAccentLabel) accent else neutral,
-        label = "label"
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+
+    // 실제 버튼처럼: 누르면 통통 줄었다 스프링백
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.82f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessHigh),
+        label = "press"
+    )
+    // 눌릴 때 화려한 액센트 채움 강도(0→1)
+    val pressGlow by animateFloatAsState(
+        targetValue = if (pressed) 1f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessHigh),
+        label = "pressGlow"
     )
     val iconTint by animateColorAsState(
-        targetValue = if (active) Color.White else accent.copy(alpha = 0.82f),
+        targetValue = if (pressed || active) Color.White else accent.copy(alpha = 0.82f),
         label = "iconTint"
     )
-    // 배지 스케일인 (스프링 바운스)
+    val labelColor by animateColorAsState(
+        targetValue = when {
+            pressed -> Color.White
+            active || alwaysAccentLabel -> accent
+            else -> neutral
+        },
+        label = "label"
+    )
+    // 배지 스케일인 (선택)
     val badgeScale by animateFloatAsState(
         targetValue = if (active) 1f else 0f,
         animationSpec = spring(
@@ -364,48 +399,45 @@ private fun BarItem(
         animationSpec = infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "bobV"
     )
-    val pillBrush = if (active) {
-        Brush.verticalGradient(listOf(accent.copy(alpha = 0.18f), Color.Transparent))
-    } else {
-        Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
-    }
-    // 선택 시 글자 팝(스프링 스케일)
+    // 선택/누름 시 글자 팝(스프링 스케일)
     val labelScale by animateFloatAsState(
-        targetValue = if (active) 1.08f else 1f,
+        targetValue = if (pressed) 1.12f else if (active) 1.08f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
         ),
         label = "labelScale"
     )
-    val badgeGrad = Brush.linearGradient(listOf(lighten(accent, 0.18f), accent, lighten(accent, -0.0f)))
+    val badgeGrad = Brush.linearGradient(listOf(lighten(accent, 0.2f), accent, accent))
+    val pressGrad = Brush.verticalGradient(listOf(lighten(accent, 0.28f), accent))
+    val activeFaint = Brush.verticalGradient(listOf(accent.copy(alpha = 0.16f), Color.Transparent))
     val container = (32 * scale).dp
-    // 누름 피드백 — 모든 항목(탭/AI/설정)에서 눌렀다 떼면 통통 스프링백
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(
-        targetValue = if (pressed) 0.84f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessHigh),
-        label = "press"
-    )
 
     Column(
         modifier = Modifier
             .padding(horizontal = 2.dp, vertical = (3 * scale).dp)
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .shadow(
+                elevation = (7 * pressGlow).dp,
+                shape = RoundedCornerShape(16.dp),
+                clip = false,
+                ambientColor = accent,
+                spotColor = accent
+            )
             .clip(RoundedCornerShape(16.dp))
-            .background(pillBrush)
+            .drawBehind {
+                if (active && pressGlow < 0.99f) drawRect(activeFaint)
+                if (pressGlow > 0.001f) drawRect(pressGrad, alpha = pressGlow)
+            }
             .clickable(interactionSource = interaction, indication = LocalIndication.current) { onClick() }
             .padding(horizontal = (8 * scale).dp, vertical = (5 * scale).dp)
             .widthIn(min = (46 * scale).dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // 아이콘 + 글자가 선택 시 함께 떠오르고(bob), 누르면 함께 스케일(press)
+        // 아이콘 + 글자가 선택 시 함께 떠오르고(bob)
         Column(
-            modifier = Modifier.graphicsLayer {
-                if (active) translationY = bob.dp.toPx()
-                scaleX = pressScale; scaleY = pressScale
-            },
+            modifier = Modifier.graphicsLayer { if (active) translationY = bob.dp.toPx() },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(

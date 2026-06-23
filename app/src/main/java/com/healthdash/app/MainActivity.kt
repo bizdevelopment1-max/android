@@ -189,11 +189,11 @@ class MainActivity : ComponentActivity() {
                                 tabs = navTabs,
                                 onTabClick = { tab ->
                                     vm.setActiveSection(tab.id)
-                                    dashWebView?.let { WebViewManager.navigateToSection(it, tab.id, tab.label) }
+                                    dashWebView?.let { WebViewManager.navigateToSection(it, tab.id, tab.navLabel) }
                                 },
                                 onMoveSection = { delta ->
                                     val tab = vm.moveSection(delta)
-                                    dashWebView?.let { WebViewManager.navigateToSection(it, tab.id, tab.label) }
+                                    dashWebView?.let { WebViewManager.navigateToSection(it, tab.id, tab.navLabel) }
                                 },
                                 onAiClick = { app -> quickLaunchAi(app) },
                                 onSettingsClick = { vm.setShowSettings(true) },
@@ -229,7 +229,7 @@ class MainActivity : ComponentActivity() {
                 bookmarks = bookmarks,
                 onSelect = { bookmark ->
                     vm.setActiveSection(bookmark.sectionId)
-                    dashWebView?.let { WebViewManager.navigateToSection(it, bookmark.sectionId, bookmark.label) }
+                    dashWebView?.let { WebViewManager.navigateToSection(it, bookmark.sectionId, bookmark.sectionId) }
                     vm.setShowBookmarks(false)
                 },
                 onDelete = { vm.deleteBookmark(it) },
